@@ -131,6 +131,22 @@ void ocall_makeProcedure(uint64_t pro[MAX_OPE][2]) {
     }
 }
 
+void displayParameter() {
+    cout << "#clocks_per_us:\t" << CLOCKS_PER_US << endl;
+    cout << "#epoch_time:\t" << EPOCH_TIME << endl;
+    cout << "#extime:\t" << EXTIME << endl;
+    cout << "#max_ope:\t" << MAX_OPE << endl;
+    // cout << "#rmw:\t\t" << RMW << endl;
+    cout << "#rratio:\t" << RRAITO << endl;
+    cout << "#thread_num:\t" << THREAD_NUM << endl;
+    cout << "#tuple_num:\t" << TUPLE_NUM << endl;
+    cout << "#ycsb:\t\t" << YCSB << endl;
+    cout << "#zipf_skew:\t" << ZIPF_SKEW << endl;
+    cout << "#logger_num:\t" << LOGGER_NUM << endl;
+    // cout << "#buffer_num:\t" << BUFFER_NUM << endl;
+    // cout << "#buffer_size:\t" << BUFFER_SIZE << endl;
+}
+
 void displayResult() {
     uint64_t total_commit_counts_ = 0;
     uint64_t total_abort_counts_ = 0;
@@ -152,6 +168,7 @@ void displayResult() {
 // MARK: main function
 
 int main() {
+    displayParameter();
     ecall_initDB();
     LoggerAffinity affin;
     affin.init(THREAD_NUM, LOGGER_NUM); // logger/worker実行threadの決定
