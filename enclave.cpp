@@ -185,6 +185,10 @@ INLINE uint64_t atomicLoadGE() {
     return result;
 }
 
+INLINE void atomicStoreThLocalEpoch(unsigned int thid, uint64_t newval) {
+    __atomic_store_n(&(ThLocalEpoch[thid]), newval, __ATOMIC_RELEASE);
+}
+
 INLINE void atomicAddGE() {
     uint64_t expected, desired;
     expected = atomicLoadGE();
@@ -383,7 +387,7 @@ bool TxExecutor::validationPhase() {
     lockWriteSet();
     if (this->status_ == TransactionStatus::Aborted) return false;  // w-w conflict検知時に弾く用
     asm volatile("":: : "memory");
-    // TODO: atomicStoreThLocalEpoch(thid_, atomicLoadGE());
+    atomicStoreThLocalEpoch(thid_, atomicLoadGE());
     asm volatile("":: : "memory");
     // Phase2, Read validation
     TIDword check;
@@ -575,6 +579,13 @@ void ecall_worker_th(int thid, Result &res) {
     }
     //cout << "worker#" << thid << " commit:" << myres.local_commit_counts_ << " abort:" << myres.local_abort_counts_ << endl;
     res = myres;
+
+    if (thid == 0) {
+        for (int i = 0; i < THREAD_NUM; i++) {
+            std::cout << ThLocalEpoch[i] << " ";
+        }
+    }
+
     return;
 }
 

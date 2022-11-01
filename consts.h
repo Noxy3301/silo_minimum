@@ -13,8 +13,7 @@
 #define ZIPF_SKEW 0
 
 #define EPOCH_TIME 40
-#define CLOCKS_PER_US 4000
+#define CLOCKS_PER_US 2900
 
 
 // TODO: 共有のClassどうしよう
-
