@@ -15,5 +15,9 @@
 #define EPOCH_TIME 40
 #define CLOCKS_PER_US 2900
 
+#include <stdint.h>
 
-// TODO: 共有のClassどうしよう
+struct returnResult {
+    uint64_t local_abort_counts_ = 0;
+    uint64_t local_commit_counts_ = 0;
+};

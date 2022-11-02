@@ -1,16 +1,16 @@
-#include "./include/random.h"
-#include "./include/zipf.h"
-
 #include <iostream>
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <cmath>
 
 #include "consts.h"
 
 #include "enclave.h"
 #include "classes.h"
 #include <mutex>
+
+using namespace std;
 
 // MARK: class(LoggerAffinity)
 
@@ -76,14 +76,13 @@ void worker_th(int thid, int &ready) {
         if (__atomic_load_n(&threadReady, __ATOMIC_ACQUIRE)) break;
     }
 
-    Result res;
-    ecall_worker_th(thid, std::ref(res));  // thread.emplace_backで直接渡せる気がしないし、こっちで受け取ってResultの下処理をしたい
+    returnResult ret;
+    ecall_worker_th(thid);  // thread.emplace_backで直接渡せる気がしないし、こっちで受け取ってResultの下処理をしたい
+    ret.local_abort_counts_ = ecall_getAbortResult(thid);
+    ret.local_commit_counts_ = ecall_getCommitResult(thid);
 
-    // TODO: get return and collect them
-    SiloResult[thid].local_commit_counts_ = res.local_commit_counts_ ;
-    SiloResult[thid].local_abort_counts_ = res.local_abort_counts_;
-    
-    // std::cout << "worker_end" << std::endl;
+    SiloResult[thid].local_commit_counts_ = ret.local_commit_counts_ ;
+    SiloResult[thid].local_abort_counts_ = ret.local_abort_counts_;
 }
 
 void logger_th(int thid) {
@@ -102,32 +101,6 @@ void waitForReady(const std::vector<int> &readys) {
             }
         }
         if (!failed) break;
-    }
-}
-
-Xoroshiro128Plus rnd;
-FastZipf zipf(&rnd, ZIPF_SKEW, TUPLE_NUM);  //関数内で宣言すると割り算処理繰り返すからクソ重いぞ！
-
-void ocall_makeProcedure(uint64_t pro[MAX_OPE][2]) {
-    rnd.init();
-    for (int i = 0; i < MAX_OPE; i++) {
-        uint64_t tmpkey;
-        // keyの決定
-        if (YCSB) {
-            tmpkey = zipf() % TUPLE_NUM;
-        } else {
-            tmpkey = rnd.next() % TUPLE_NUM;
-        }
-        pro[i][1] = tmpkey;
-
-        // Operation typeの決定
-        if ((rnd.next() % 100) < RRAITO) {
-            // pro.emplace_back(Ope::READ, tmpkey);
-            pro[i][0] = 0;
-        } else {
-            // pro.emplace_back(Ope::WRITE, tmpkey);
-            pro[i][0] = 1;
-        }
     }
 }
 
@@ -152,12 +125,14 @@ void displayResult() {
     uint64_t total_abort_counts_ = 0;
 
     for (int i = 0; i < THREAD_NUM; i++) {
+        cout << "thread#" << i << "\tcommit: " << SiloResult[i].local_commit_counts_ << "\tabort:" << SiloResult[i].local_abort_counts_ << endl;
         total_commit_counts_ += SiloResult[i].local_commit_counts_;
         total_abort_counts_ += SiloResult[i].local_abort_counts_;
     }
 
     cout << "commit_counts_:\t" << total_commit_counts_ << endl;
     cout << "abort_counts_:\t" << total_abort_counts_ << endl;
+    cout << "abort_rate:\t" << (double)total_abort_counts_ / (double)(total_commit_counts_ + total_abort_counts_) << endl;
 
     uint64_t result = total_commit_counts_ / EXTIME;
     cout << "latency[ns]:\t" << powl(10.0, 9.0) / result * THREAD_NUM << endl;
@@ -168,7 +143,13 @@ void displayResult() {
 // MARK: main function
 
 int main() {
+
+    chrono::system_clock::time_point p1, p2, p3, p4;
+
     displayParameter();
+
+    p1 = chrono::system_clock::now();
+    
     ecall_initDB();
     LoggerAffinity affin;
     affin.init(THREAD_NUM, LOGGER_NUM); // logger/worker実行threadの決定
@@ -176,6 +157,8 @@ int main() {
     std::vector<int> readys(THREAD_NUM);
     std::vector<std::thread> lthv;
     std::vector<std::thread> wthv;
+
+    p2 = chrono::system_clock::now();
 
     int i = 0, j = 0;
     for (auto itr = affin.nodes_.begin(); itr != affin.nodes_.end(); itr++, j++) {
@@ -185,6 +168,8 @@ int main() {
         }
     }
 
+    p3 = chrono::system_clock::now();
+
     waitForReady(readys);
     __atomic_store_n(&threadReady, true, __ATOMIC_RELEASE);
     ecall_sendStart();
@@ -193,6 +178,17 @@ int main() {
 
     for (auto &th : lthv) th.join();
     for (auto &th : wthv) th.join();
+
+    p4 = chrono::system_clock::now();
+
+    double duration1 = static_cast<double>(chrono::duration_cast<chrono::microseconds>(p2 - p1).count() / 1000.0);
+    double duration2 = static_cast<double>(chrono::duration_cast<chrono::microseconds>(p3 - p2).count() / 1000.0);
+    double duration3 = static_cast<double>(chrono::duration_cast<chrono::microseconds>(p4 - p3).count() / 1000.0);
+
+    std::cout << "[info]\tmakeDB:\t" << duration1/1000 << "s.\n";
+    std::cout << "[info]\tcreateThread:\t" << duration2/1000 << "s.\n";
+    std::cout << "[info]\texecutionTime:\t" << duration3/1000 << "s.\n";
+
 
     displayResult();
 

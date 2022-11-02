@@ -1,3 +1,6 @@
+#include "./include/random.h"
+#include "./include/zipf.h"
+
 #include "consts.h"
 
 #include <vector>
@@ -158,7 +161,7 @@ std::vector<uint64_t> ThLocalDurableEpoch(LOGGER_NUM);
 uint64_t DurableEpoch;
 uint64_t GlobalEpoch = 1;
 
-std::vector<Result> results(THREAD_NUM); //TODO: mainの方でもsiloresultを定義しているので重複回避目的で名前変更しているけどここら辺どうやって扱うか考えておく
+std::vector<returnResult> results(THREAD_NUM);
 
 bool start = false;
 bool quit = false;
@@ -499,9 +502,12 @@ void ecall_sendQuit() {
 }
 
 
-void ecall_worker_th(int thid, Result &res) {
+void ecall_worker_th(int thid) {
     TxExecutor trans(thid);
-    Result &myres = std::ref(results[thid]);
+    returnResult &myres = std::ref(results[thid]);
+    Xoroshiro128Plus rnd;
+    FastZipf zipf(&rnd, ZIPF_SKEW, TUPLE_NUM);  //関数内で宣言すると割り算処理繰り返すからクソ重いぞ！
+    rnd.init();
     uint64_t epoch_timer_start, epoch_timer_stop;
 
     while (true) {
@@ -513,29 +519,25 @@ void ecall_worker_th(int thid, Result &res) {
     while (true) {
         if (__atomic_load_n(&quit, __ATOMIC_ACQUIRE)) break;
         
-        // procedure型で～ってやるのがめんどいので、数値だけ生成してもらって内部で解釈しなおす
-        uint64_t rcd_pro[MAX_OPE][2]; 
-        ocall_makeProcedure(rcd_pro);
+        // enclave版と同じ形にしてできるだけフェアにする, YCSBは一旦考慮しない形で
+        uint64_t rcd_pro[MAX_OPE][2];
+        for (int i = 0; i < MAX_OPE; i++) {
+            uint64_t tmpkey, tmpope;
+            tmpkey = rnd.next();
+            tmpope = rnd.next();
+            rcd_pro[i][1] = tmpkey % TUPLE_NUM;
+            if ((tmpope % 100) < RRAITO) {
+                rcd_pro[i][0] = 0;
+            } else {
+                rcd_pro[i][0] = 1;
+            }
+        }
+        
         makeProcedure(trans.pro_set_, rcd_pro); // ocallで生成したprocedureをTxExecutorに移し替える
 
     RETRY:
         if (thid == 0) leaderWork(epoch_timer_start, epoch_timer_stop);
         if (__atomic_load_n(&quit, __ATOMIC_ACQUIRE)) break;
-
-        // DEBUG: procedureが生成されているかの確認
-        #if 0
-        for (auto itr = trans.pro_set_.begin(); itr != trans.pro_set_.end(); itr++) {
-            if ((*itr).ope_ == Ope::READ) {
-                std::cout << "R_" << (*itr).key_;
-            } else if ((*itr).ope_ == Ope::WRITE) {
-                std::cout << "W_" << (*itr).key_;
-            }
-            if (itr != trans.pro_set_.end()) {
-                std::cout << " ";
-            }
-        }
-        std::cout << std::endl;
-        #endif
 
         trans.begin();
         for (auto itr = trans.pro_set_.begin(); itr != trans.pro_set_.end(); itr++) {
@@ -551,23 +553,6 @@ void ecall_worker_th(int thid, Result &res) {
             }
         }
 
-        // DEBUG: read/write setに登録できているのかの確認 -> OKっぽい
-        #if 0
-        cout << "read " <<endl;
-        for (auto itr = trans.read_set_.begin(); itr != trans.read_set_.end(); itr++) {
-            std::cout << (*itr).key_ << " ";
-        }
-        cout << endl;
-        cout << "write " <<endl;
-        for (auto itr = trans.write_set_.begin(); itr != trans.write_set_.end(); itr++) {
-            std::cout << (*itr).key_ << " ";
-        }
-        cout << endl;
-        cout << "==========" << endl;
-        trans.read_set_.clear();
-        trans.write_set_.clear();
-        #endif
-
         if (trans.validationPhase()) {
             trans.writePhase();
             storeRelease(myres.local_commit_counts_, loadAcquire(myres.local_commit_counts_) + 1);
@@ -578,17 +563,21 @@ void ecall_worker_th(int thid, Result &res) {
         }
     }
     //cout << "worker#" << thid << " commit:" << myres.local_commit_counts_ << " abort:" << myres.local_abort_counts_ << endl;
-    res = myres;
-
-    if (thid == 0) {
-        for (int i = 0; i < THREAD_NUM; i++) {
-            std::cout << ThLocalEpoch[i] << " ";
-        }
-    }
-
+    // if (thid == 0) {
+    //     for (int i = 0; i < THREAD_NUM; i++) {
+    //         std::cout << ThLocalEpoch[i] << " ";
+    //     }
+    // }
     return;
 }
 
 void ecall_logger_th() {
     
+}
+uint64_t ecall_getAbortResult(int thid) {
+    return results[thid].local_abort_counts_;
+}
+
+uint64_t ecall_getCommitResult(int thid) {
+    return results[thid].local_commit_counts_;
 }
