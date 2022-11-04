@@ -160,7 +160,6 @@ std::vector<uint64_t> CTIDW(THREAD_NUM);
 std::vector<uint64_t> ThLocalDurableEpoch(LOGGER_NUM);
 uint64_t DurableEpoch;
 uint64_t GlobalEpoch = 1;
-
 std::vector<returnResult> results(THREAD_NUM);
 
 bool start = false;
@@ -478,13 +477,15 @@ void ecall_initDB() {
     DurableEpoch = 0;
 }
 
-void makeProcedure(std::vector<Procedure> &pro, uint64_t rcd_pro[MAX_OPE][2]) {
+void makeProcedure(std::vector<Procedure> &pro, Xoroshiro128Plus &rnd) {
     pro.clear();
     for (int i = 0; i < MAX_OPE; i++) {
-        if (rcd_pro[i][0] == 0) {
-            pro.emplace_back(Ope::READ, rcd_pro[i][1]);
+        uint64_t tmpkey, tmpope;
+        tmpkey = rnd.next() % TUPLE_NUM;
+        if ((rnd.next() % 100) == RRAITO) {
+            pro.emplace_back(Ope::READ, tmpkey);
         } else {
-            pro.emplace_back(Ope::WRITE, rcd_pro[i][1]);
+            pro.emplace_back(Ope::WRITE, tmpkey);
         }
     }
 }
@@ -501,14 +502,24 @@ void ecall_sendQuit() {
     __atomic_store_n(&quit, true, __ATOMIC_RELEASE);
 }
 
+unsigned get_rand() {
+    // 乱数生成器（引数にシードを指定可能）
+    static std::mt19937 mt32(0);
+
+    // [0, (2^32)-1] の一様分布整数を生成
+    return mt32();
+}
+
 
 void ecall_worker_th(int thid) {
     TxExecutor trans(thid);
     returnResult &myres = std::ref(results[thid]);
-    Xoroshiro128Plus rnd;
-    FastZipf zipf(&rnd, ZIPF_SKEW, TUPLE_NUM);  //関数内で宣言すると割り算処理繰り返すからクソ重いぞ！
-    rnd.init();
     uint64_t epoch_timer_start, epoch_timer_stop;
+    // Xoroshiro128Plus rnd;
+    // FastZipf zipf(&rnd, ZIPF_SKEW, TUPLE_NUM);  //関数内で宣言すると割り算処理繰り返すからクソ重いぞ！
+    // rnd.init();
+    unsigned init_seed = get_rand();
+    Xoroshiro128Plus rnd(init_seed);
 
     while (true) {
         if (__atomic_load_n(&start, __ATOMIC_ACQUIRE)) break;
@@ -518,22 +529,8 @@ void ecall_worker_th(int thid) {
 
     while (true) {
         if (__atomic_load_n(&quit, __ATOMIC_ACQUIRE)) break;
-        
-        // enclave版と同じ形にしてできるだけフェアにする, YCSBは一旦考慮しない形で
-        uint64_t rcd_pro[MAX_OPE][2];
-        for (int i = 0; i < MAX_OPE; i++) {
-            uint64_t tmpkey, tmpope;
-            tmpkey = rnd.next();
-            tmpope = rnd.next();
-            rcd_pro[i][1] = tmpkey % TUPLE_NUM;
-            if ((tmpope % 100) < RRAITO) {
-                rcd_pro[i][0] = 0;
-            } else {
-                rcd_pro[i][0] = 1;
-            }
-        }
-        
-        makeProcedure(trans.pro_set_, rcd_pro); // ocallで生成したprocedureをTxExecutorに移し替える
+
+        makeProcedure(trans.pro_set_, rnd); // ocallで生成したprocedureをTxExecutorに移し替える
 
     RETRY:
         if (thid == 0) leaderWork(epoch_timer_start, epoch_timer_stop);
