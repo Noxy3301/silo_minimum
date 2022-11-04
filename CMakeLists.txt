@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.13)
 
 set(ENV{CXX} g++)
 project(ccbench_base_silo)
@@ -16,7 +16,11 @@ file(GLOB SILO_SOURCES
 
 #set(CMAKE_CXX_FLAGS "-pthread -fpermissive -Wreturn-type")
 
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 
 add_executable(silo.exe ${SILO_SOURCES})
+
+
+target_compile_options(silo.exe PUBLIC -O0 -g -std=c++11 -m64)

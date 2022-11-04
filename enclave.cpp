@@ -162,6 +162,8 @@ uint64_t DurableEpoch;
 uint64_t GlobalEpoch = 1;
 std::vector<returnResult> results(THREAD_NUM);
 
+// std::vector<Result> results(THREAD_NUM); //TODO: mainの方でもsiloresultを定義しているので重複回避目的で名前変更しているけどここら辺どうやって扱うか考えておく
+
 bool start = false;
 bool quit = false;
 
@@ -510,16 +512,19 @@ unsigned get_rand() {
     return mt32();
 }
 
-
 void ecall_worker_th(int thid) {
     TxExecutor trans(thid);
     returnResult &myres = std::ref(results[thid]);
     uint64_t epoch_timer_start, epoch_timer_stop;
-    // Xoroshiro128Plus rnd;
-    // FastZipf zipf(&rnd, ZIPF_SKEW, TUPLE_NUM);  //関数内で宣言すると割り算処理繰り返すからクソ重いぞ！
-    // rnd.init();
-    unsigned init_seed = get_rand();
+    
+    unsigned init_seed;
+    init_seed = get_rand();
+    // sgx_read_rand((unsigned char *) &init_seed, 4);
     Xoroshiro128Plus rnd(init_seed);
+
+    // Xoroshiro128Plus rnd(123456);   //seed値に使っている？とりあえず定数で置いておく
+
+    // rnd.init()
 
     while (true) {
         if (__atomic_load_n(&start, __ATOMIC_ACQUIRE)) break;
@@ -529,10 +534,11 @@ void ecall_worker_th(int thid) {
 
     while (true) {
         if (__atomic_load_n(&quit, __ATOMIC_ACQUIRE)) break;
-
+        
         makeProcedure(trans.pro_set_, rnd); // ocallで生成したprocedureをTxExecutorに移し替える
 
     RETRY:
+
         if (thid == 0) leaderWork(epoch_timer_start, epoch_timer_stop);
         if (__atomic_load_n(&quit, __ATOMIC_ACQUIRE)) break;
 
@@ -549,7 +555,7 @@ void ecall_worker_th(int thid) {
                 return;
             }
         }
-
+   
         if (trans.validationPhase()) {
             trans.writePhase();
             storeRelease(myres.local_commit_counts_, loadAcquire(myres.local_commit_counts_) + 1);
@@ -559,18 +565,13 @@ void ecall_worker_th(int thid) {
             goto RETRY;
         }
     }
-    //cout << "worker#" << thid << " commit:" << myres.local_commit_counts_ << " abort:" << myres.local_abort_counts_ << endl;
-    // if (thid == 0) {
-    //     for (int i = 0; i < THREAD_NUM; i++) {
-    //         std::cout << ThLocalEpoch[i] << " ";
-    //     }
-    // }
     return;
 }
 
 void ecall_logger_th() {
     
 }
+
 uint64_t ecall_getAbortResult(int thid) {
     return results[thid].local_abort_counts_;
 }
