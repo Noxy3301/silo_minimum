@@ -4,10 +4,10 @@
 #include <atomic>
 #include <cmath>
 
-#include "consts.h"
+#include "../Include/consts.h"
 
-#include "enclave.h"
-#include "classes.h"
+#include "../Enclave/enclave.h"
+#include "../Include/classes.h"
 #include <mutex>
 
 using namespace std;

@@ -1,7 +1,7 @@
-#include "./include/random.h"
-#include "./include/zipf.h"
+#include "../Include/random.h"
+#include "../Include/zipf.h"
 
-#include "consts.h"
+#include "../Include/consts.h"
 
 #include <vector>
 #include <thread>
@@ -14,7 +14,7 @@
 using std::cout;
 using std::endl;
 
-#include "main.h"
+#include "../App/main.h"
 #include "enclave.h"
 
 // MARK: class(atomic_wrapper)
