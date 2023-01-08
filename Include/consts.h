@@ -15,6 +15,14 @@
 #define EPOCH_TIME 40
 #define CLOCKS_PER_US 2900
 
+#define BUFFER_NUM 2
+#define BUFFER_SIZE 512
+#define EPOCH_DIFF 0
+
+#define VAL_SIZE 4
+#define PAGE_SIZE 4096
+#define LOGSET_SIZE 1000
+
 #include <stdint.h>
 
 struct returnResult {

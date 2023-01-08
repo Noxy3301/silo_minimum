@@ -7,7 +7,7 @@
 #include "../Include/consts.h"
 
 #include "../Enclave/enclave.h"
-#include "../Include/classes.h"
+#include "../Include/result.h"
 #include <mutex>
 
 using namespace std;
@@ -86,7 +86,7 @@ void worker_th(int thid, int &ready) {
 }
 
 void logger_th(int thid) {
-
+    ecall_worker_th(thid);
 }
 
 // MARK: utilities

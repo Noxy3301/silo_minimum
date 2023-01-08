@@ -12,6 +12,9 @@ using std::endl;
 #include "enclave.h"
 #include "../Include/consts.h"
 
+#include "include/logger.h"
+#include "include/notifier.h"
+
 #include "include/atomic_tool.h"
 #include "include/atomic_wrapper.h"
 #include "include/silo_op_element.h"

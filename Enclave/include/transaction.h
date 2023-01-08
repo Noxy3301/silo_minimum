@@ -4,6 +4,10 @@
 
 #include "silo_op_element.h"
 #include "procedure.h"
+#include "log_buffer.h"
+#include "notifier.h"
+
+#include "../../Include/result.h"
 
 enum class TransactionStatus : uint8_t {
     InFlight,
@@ -26,6 +30,13 @@ class TxExecutor {
         uint64_t write_val_;
         uint64_t return_val_;
 
+        // TxExecutorLog
+        ResultLog *sres_lg_;
+        LogBufferPool log_buffer_pool_;
+        NotificationId nid_;
+        std::uint32_t nid_counter_ = 0; // Notification ID
+        int logger_thid_;
+
         TxExecutor(int thid);
 
         void begin();
@@ -40,5 +51,10 @@ class TxExecutor {
         // TODO void wal(std::uint64_t ctid);
         void writePhase();
         void abort();
+    
+        void wal(std::uint64_t ctid);
+        bool pauseCondition();
+        void epochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop);
+        void durableEpochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop, const bool &quit);
 
 };
