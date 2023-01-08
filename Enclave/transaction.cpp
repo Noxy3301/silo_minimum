@@ -5,6 +5,8 @@
 #include "include/atomic_tool.h"
 #include "include/atomic_wrapper.h"
 #include "include/transaction.h"
+#include "include/log.h"
+#include "include/util.h"
 
 TxExecutor::TxExecutor(int thid) : thid_(thid) {
     read_set_.reserve(MAX_OPE);
@@ -19,6 +21,7 @@ void TxExecutor::begin() {
     status_ = TransactionStatus::InFlight;
     max_wset_.obj_ = 0;
     max_rset_.obj_ = 0;
+    nid_ = NotificationId(nid_counter_++, thid_, rdtscp());
 }
 
 void TxExecutor::read(uint64_t key) {
@@ -156,7 +159,18 @@ bool TxExecutor::validationPhase() {
     return true;
 }
 
-// TODO: void TxExecutor::wal(std::uint64_t ctid)
+void TxExecutor::wal(std::uint64_t ctid) {
+    TIDword old_tid;
+    TIDword new_tid;
+    old_tid.obj_ = loadAcquire(CTIDW[thid_]);
+    new_tid.obj_ = ctid;
+    bool new_epoch_begins = (old_tid.epoch != new_tid.epoch);
+    log_buffer_pool_.push(ctid, nid_, write_set_, write_val_, new_epoch_begins);
+    if (new_epoch_begins) {
+      // store CTIDW
+      __atomic_store_n(&(CTIDW[thid_]), ctid, __ATOMIC_RELEASE);
+    }
+}
 
 void TxExecutor::writePhase() {
     TIDword tid_a, tid_b, tid_c;    // TIDの算出
@@ -175,6 +189,7 @@ void TxExecutor::writePhase() {
     mrctid_ = maxtid;
 
     // TODO: wal
+    wal(maxtid.obj_);
 
     // write
     for (auto itr = write_set_.begin(); itr != write_set_.end(); itr++) {
@@ -188,4 +203,51 @@ void TxExecutor::writePhase() {
 void TxExecutor::abort() {
     read_set_.clear();
     write_set_.clear();
+}
+
+
+
+bool TxExecutor::pauseCondition() {
+    auto dlepoch = loadAcquire(ThLocalDurableEpoch[logger_thid_]);
+    return loadAcquire(ThLocalEpoch[thid_]) > dlepoch + EPOCH_DIFF;
+}
+
+void TxExecutor::epochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop) {
+    usleep(1);
+    if (thid_ == 0) leaderWork(epoch_timer_start, epoch_timer_stop);
+    TIDword old_tid;
+    old_tid.obj_ = loadAcquire(CTIDW[thid_]);
+    // load GE
+    atomicStoreThLocalEpoch(thid_, atomicLoadGE());
+    uint64_t new_epoch = loadAcquire(ThLocalEpoch[thid_]);
+    if (old_tid.epoch != new_epoch) {
+        TIDword tid;
+        tid.epoch = new_epoch;
+        tid.lock = 0;
+        tid.latest = 1;
+        // store CTIDW
+        __atomic_store_n(&(CTIDW[thid_]), tid.obj_, __ATOMIC_RELEASE);
+    }
+}
+
+// TODO:コピペなので要確認
+void TxExecutor::durableEpochWork(uint64_t &epoch_timer_start,
+                                   uint64_t &epoch_timer_stop, const bool &quit) {
+  std::uint64_t t = rdtscp();
+  // pause this worker until Durable epoch catches up
+  if (EPOCH_DIFF > 0) {
+    if (pauseCondition()) {
+      log_buffer_pool_.publish();
+      do {
+        epochWork(epoch_timer_start, epoch_timer_stop);
+        if (loadAcquire(quit)) return;
+      } while (pauseCondition());
+    }
+  }
+  while (!log_buffer_pool_.is_ready()) {
+    epochWork(epoch_timer_start, epoch_timer_stop);
+    if (loadAcquire(quit)) return;
+  }
+  if (log_buffer_pool_.current_buffer_==NULL) std::abort();
+  sres_lg_->local_wait_depoch_latency_ += rdtscp() - t;
 }

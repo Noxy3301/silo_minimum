@@ -21,7 +21,11 @@ class TxExecutor {
         std::vector<WriteElement> write_set_;
         std::vector<Procedure> pro_set_;
 
-        //TODO: log?
+        std::vector<LogRecord> log_set_;
+        LogHeader latest_log_header_;
+
+        Result *sres_;
+
         TransactionStatus status_;
         unsigned int thid_;
         TIDword mrctid_;

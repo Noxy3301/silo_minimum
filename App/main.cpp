@@ -70,14 +70,14 @@ std::vector<Result> SiloResult(THREAD_NUM);
 
 // MARK: thread function
 
-void worker_th(int thid, int &ready) {
+void worker_th(int thid, int gid, int &ready) {
     __atomic_store_n(&ready, 1, __ATOMIC_RELEASE);
     while (true) {
         if (__atomic_load_n(&threadReady, __ATOMIC_ACQUIRE)) break;
     }
 
     returnResult ret;
-    ecall_worker_th(thid);  // thread.emplace_backで直接渡せる気がしないし、こっちで受け取ってResultの下処理をしたい
+    ecall_worker_th(thid, gid);  // thread.emplace_backで直接渡せる気がしないし、こっちで受け取ってResultの下処理をしたい
     ret.local_abort_counts_ = ecall_getAbortResult(thid);
     ret.local_commit_counts_ = ecall_getCommitResult(thid);
 
@@ -86,7 +86,7 @@ void worker_th(int thid, int &ready) {
 }
 
 void logger_th(int thid) {
-    ecall_worker_th(thid);
+    ecall_logger_th(thid);
 }
 
 // MARK: utilities
@@ -164,7 +164,7 @@ int main() {
     for (auto itr = affin.nodes_.begin(); itr != affin.nodes_.end(); itr++, j++) {
         lthv.emplace_back(logger_th, j);    // TODO: add some arguments
         for (auto wcpu = itr->worker_cpu_.begin(); wcpu != itr->worker_cpu_.end(); wcpu++, i++) {
-            wthv.emplace_back(worker_th, i, std::ref(readys[i]));  // TODO: add some arguments
+            wthv.emplace_back(worker_th, i, j, std::ref(readys[i]));  // TODO: add some arguments
         }
     }
 

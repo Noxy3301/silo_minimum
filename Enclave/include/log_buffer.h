@@ -36,7 +36,7 @@ class LogBuffer {
         uint64_t min_epoch_ = ~(uint64_t)0;
         uint64_t max_epoch_ = 0;
 
-        void push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set, char *val);
+        void push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set, uint32_t val);
         void pass_nid(NidBuffer &nid_buffer, NidStats &nid_stats, std::uint64_t deq_time);
         void return_buffer();
         bool empty();
@@ -123,9 +123,10 @@ class LogBufferPool {
         }
         
         bool is_ready();
-        void push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set, char *val, bool new_epoch_begins);
+        void push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set, uint32_t val, bool new_epoch_begins);
         void publish();
         void return_buffer(LogBuffer *lb);
-        void terminate(ResultLog &myres);
+        // void terminate(ResultLog &myres);
+        void terminate();
 };
 

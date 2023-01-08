@@ -5,7 +5,7 @@
 #include "include/notifier.h"
 #include "../Include/result.h"
 
-void LogBufferPool::push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set, char *val, bool new_epoch_begins) {
+void LogBufferPool::push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set, uint32_t val, bool new_epoch_begins) {
     nid.tid_ = tid;
     nid.t_mid_ = rdtscp();
     assert(current_buffer_ != NULL);
@@ -29,7 +29,7 @@ void LogBufferPool::push(std::uint64_t tid, NotificationId &nid, std::vector<Wri
     #endif
 };
 
-void LogBuffer::push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set, char *val) {
+void LogBuffer::push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set, uint32_t val) {
     // Q:read_only txもあるからwrite_set.size() == 0もあり得てassertで落ちるけど、NDEBUGがONになっている、じゃあAssert置く意味なくない？
     // assert(write_set.size() > 0);   // A:本当に置く意味がないのでこれでOK Q:というかやっぱりここが釈然としない
     // buffering
@@ -87,16 +87,26 @@ void LogBufferPool::return_buffer(LogBuffer *lb) {
     cv_deq_.notify_one();
 }
 
+// ResultLog &myresを受け取るけどanalyzeしないから受け取らない方向で
 
-void LogBufferPool::terminate(ResultLog &myres) {
+void LogBufferPool::terminate() {
     quit_ = true;
     if (current_buffer_ != NULL) {  // current_buffer_がNULL->bufferの中身全部吐き出してる
         if (!current_buffer_->empty()) {
             publish();    
         }
     }
-    // analyzeは省略
 }
+
+// void LogBufferPool::terminate(ResultLog &myres) {
+//     quit_ = true;
+//     if (current_buffer_ != NULL) {  // current_buffer_がNULL->bufferの中身全部吐き出してる
+//         if (!current_buffer_->empty()) {
+//             publish();    
+//         }
+//     }
+//     // analyzeは省略
+// }
 
 // TODO:コピペなので要確認
 // void LogBuffer::pass_nid(NidBuffer &nid_buffer, NidStats &stats, std::uint64_t deq_time) {

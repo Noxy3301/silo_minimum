@@ -26,19 +26,19 @@ class LogHeader {
 class LogRecord {
     public:
         uint64_t tid_;
-        unsigned int key_;
-        char val_[VAL_SIZE];
+        uint32_t key_;
+        uint32_t val_;
 
         LogRecord() : tid_(0), key_(0) {}
-        LogRecord(uint64_t tid, unsigned int key, char *val) : tid_(tid), key_(key) {
-            memcpy(this->val_, val, VAL_SIZE);
+        LogRecord(uint64_t tid, uint32_t key, uint32_t val) : tid_(tid), key_(key) {
+            this->val_, val;
         }
 
         int computeChkSum() {
             // compute check_sum
             int chkSum = 0;
             int *itr = (int*) this;
-            for (unsigned int i = 0; i < sizeof(LogRecord) / sizeof(int); i++) {
+            for (uint32_t i = 0; i < sizeof(LogRecord) / sizeof(int); i++) {
                 chkSum += (*itr);
                 itr++;
             }

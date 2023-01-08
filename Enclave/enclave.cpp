@@ -30,6 +30,8 @@ std::vector<uint64_t> ThLocalDurableEpoch(LOGGER_NUM);
 uint64_t DurableEpoch;
 uint64_t GlobalEpoch = 1;
 std::vector<returnResult> results(THREAD_NUM);
+std::atomic<Logger *> logs[LOGGER_NUM];
+Notifier notifier;
 
 bool start = false;
 bool quit = false;
@@ -54,7 +56,7 @@ unsigned get_rand() {
     return mt32();
 }
 
-void ecall_worker_th(int thid) {
+void ecall_worker_th(int thid, int gid) {
     TxExecutor trans(thid);
     returnResult &myres = std::ref(results[thid]);
     uint64_t epoch_timer_start, epoch_timer_stop;
@@ -64,9 +66,14 @@ void ecall_worker_th(int thid) {
     // sgx_read_rand((unsigned char *) &init_seed, 4);
     Xoroshiro128Plus rnd(init_seed);
 
-    // Xoroshiro128Plus rnd(123456);   //seed値に使っている？とりあえず定数で置いておく
-
-    // rnd.init()
+    Logger *logger;
+    std::atomic<Logger*> *logp = &(logs[gid]);  // loggerのthreadIDを指定したいからgidを使う
+    for (;;) {
+        logger = logp->load();
+        if (logger != 0) break;
+        std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+    }
+    logger->add_tx_executor(trans);
 
     while (true) {
         if (__atomic_load_n(&start, __ATOMIC_ACQUIRE)) break;
@@ -107,11 +114,20 @@ void ecall_worker_th(int thid) {
             goto RETRY;
         }
     }
+
+    trans.log_buffer_pool_.terminate();
+    logger->worker_end(thid);
+
     return;
 }
 
-void ecall_logger_th() {
-    
+void ecall_logger_th(int thid) {
+    Logger logger(thid, std::ref(notifier));
+    notifier.add_logger(&logger);
+    std::atomic<Logger*> *logp = &(logs[thid]);
+    logp->store(&logger);
+    logger.worker();
+    return;
 }
 
 uint64_t ecall_getAbortResult(int thid) {

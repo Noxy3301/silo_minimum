@@ -1,7 +1,7 @@
 #pragma once
 
-#define THREAD_NUM 10
-#define LOGGER_NUM 1
+#define THREAD_NUM 9
+#define LOGGER_NUM 3
 #define TUPLE_NUM 1000000
 //#define TUPLE_NUM 100
 #define EXTIME 3
