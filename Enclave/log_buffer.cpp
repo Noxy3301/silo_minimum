@@ -4,6 +4,7 @@
 #include "include/log_queue.h"
 #include "include/notifier.h"
 #include "../Include/result.h"
+#include "include/util.h"
 
 void LogBufferPool::push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set, uint32_t val, bool new_epoch_begins) {
     nid.tid_ = tid;
@@ -14,7 +15,7 @@ void LogBufferPool::push(std::uint64_t tid, NotificationId &nid, std::vector<Wri
         publish();
     }
     while (!is_ready()) {
-        std::this_thread::sleep_for(std::chrono::microseconds(10));
+        waitTime_ns(10*1000);
     }
     if (quit_) return;
     current_buffer_->push(tid, nid, write_set, val);
@@ -69,7 +70,7 @@ void LogBufferPool::publish() {
     #if 0
         uint64_t t = rdtscp();
     #endif
-    while (!is_ready()) usleep(5);
+    while (!is_ready()) waitTime_ns(5*1000);
     assert(current_buffer_ != NULL);
     // enqueue
     if (!current_buffer_->empty()) {

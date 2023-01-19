@@ -10,6 +10,7 @@
 #include "log.h"
 #include "common.h"
 #include "log_writer.h"
+#include "util.h"
 
 #include "../../Include/result.h"
 
@@ -88,7 +89,7 @@ class LogBufferPool {
             for (;;) {
                 unsigned int lock = 0;
                 if (my_mutex_.compare_exchange_weak(lock, 1)) return;
-                std::this_thread::sleep_for(std::chrono::nanoseconds(30));
+                waitTime_ns(30);
             }
         }
 

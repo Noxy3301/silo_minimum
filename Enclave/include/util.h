@@ -17,6 +17,15 @@ inline static bool chkClkSpan(const uint64_t start, const uint64_t stop, const u
     }
 }
 
+inline static void waitTime_ns(const uint64_t time) {
+    uint64_t start = rdtscp();
+    uint64_t end = 0;
+    for (;;) {
+        end = rdtscp();
+        if (end - start > time * CLOCKS_PER_US) break;   // ns換算にしたいけど除算はコストが高そうなので1000倍して調整
+    }
+}
+
 extern bool chkEpochLoaded();
 extern void leaderWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop);
 extern void ecall_initDB();

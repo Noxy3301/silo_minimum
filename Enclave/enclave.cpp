@@ -71,7 +71,7 @@ void ecall_worker_th(int thid, int gid) {
     for (;;) {
         logger = logp->load();
         if (logger != 0) break;
-        std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+        waitTime_ns(100);
     }
     logger->add_tx_executor(trans);
 

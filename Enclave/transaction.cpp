@@ -215,7 +215,7 @@ bool TxExecutor::pauseCondition() {
 }
 
 void TxExecutor::epochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop) {
-    usleep(1);
+    waitTime_ns(1*1000);
     if (thid_ == 0) leaderWork(epoch_timer_start, epoch_timer_stop);
     TIDword old_tid;
     old_tid.obj_ = loadAcquire(CTIDW[thid_]);
