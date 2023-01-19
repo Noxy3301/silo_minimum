@@ -96,17 +96,8 @@ void LogBufferPool::terminate() {
             publish();    
         }
     }
+    // analyzeは省略
 }
-
-// void LogBufferPool::terminate(ResultLog &myres) {
-//     quit_ = true;
-//     if (current_buffer_ != NULL) {  // current_buffer_がNULL->bufferの中身全部吐き出してる
-//         if (!current_buffer_->empty()) {
-//             publish();    
-//         }
-//     }
-//     // analyzeは省略
-// }
 
 // TODO:コピペなので要確認
 // void LogBuffer::pass_nid(NidBuffer &nid_buffer, NidStats &stats, std::uint64_t deq_time) {

@@ -26,5 +26,5 @@ class Tuple {
     public:
         alignas(CACHE_LINE_SIZE) TIDword tidword_;
         uint64_t key_;
-        uint64_t val_;
+        uint32_t val_;
 };

@@ -87,7 +87,7 @@ class NidBuffer {
 
 class Notifier {
     private:
-        std::thread thread_;
+        // std::thread thread_;
         std::mutex mutex_;
         std::condition_variable cv_enq_;
         std::condition_variable cv_deq_;
@@ -117,17 +117,17 @@ class Notifier {
         PepochFile pepoch_file_;
         NidBuffer buffer_;
         // NotifyStats notify_stats_;
-        std::vector<std::array<std::uint64_t, 6>> *latency_log_;    //uint64_tが6個で1セットのやつがvectorに入っている
+        // std::vector<std::array<std::uint64_t, 6>> *latency_log_;    //uint64_tが6個で1セットのやつがvectorに入っている
 
         Notifier() {
-            latency_log_ = new std::vector<std::array<std::uint64_t, 6>>;
-            latency_log_->reserve(65536);   // 事前にメモリを確保しておく
+            // latency_log_ = new std::vector<std::array<std::uint64_t, 6>>;
+            // latency_log_->reserve(65536);   // 事前にメモリを確保しておく
             start_clock_ = rdtscp();
             pepoch_file_.open();
         }
 
         ~Notifier() {
-            delete latency_log_;
+            // delete latency_log_;
         }
 
         void add_logger(Logger *logger);

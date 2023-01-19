@@ -17,11 +17,35 @@ TxExecutor::TxExecutor(int thid) : thid_(thid) {
     max_wset_.obj_ = 0;
 }
 
+void TxExecutor::abort() {
+    read_set_.clear();
+    write_set_.clear();
+}
+
 void TxExecutor::begin() {
     status_ = TransactionStatus::InFlight;
     max_wset_.obj_ = 0;
     max_rset_.obj_ = 0;
     nid_ = NotificationId(nid_counter_++, thid_, rdtscp());
+}
+
+void TxExecutor::lockWriteSet() {
+    TIDword expected, desired;
+    for (auto itr = write_set_.begin(); itr != write_set_.end(); itr++) {
+        expected.obj_ = loadAcquire((*itr).rcdptr_->tidword_.obj_);
+        for (;;) {
+            if (expected.lock) {
+                this->status_ = TransactionStatus::Aborted; // w-w conflictは即abort
+                if (itr != write_set_.begin()) unlockWriteSet(itr);
+                return;
+            } else {
+                desired = expected;
+                desired.lock = 1;
+                if (compareExchange((*itr).rcdptr_->tidword_.obj_, expected.obj_, desired.obj_)) break;
+            }
+        }
+        max_wset_ = std::max(max_wset_, expected);
+    }
 }
 
 void TxExecutor::read(uint64_t key) {
@@ -56,22 +80,6 @@ void TxExecutor::read(uint64_t key) {
     return;
 }
 
-void TxExecutor::write(uint64_t key, uint64_t val) {
-    if (searchWriteSet(key)) goto FINISH_WRITE;
-    Tuple *tuple;
-    ReadElement *re;
-    re = searchReadSet(key);
-    if (re) {   //HACK: 仕様がわかってないよ(田中先生も)
-        tuple = re->rcdptr_;
-    } else {
-        tuple = &Table[key];
-    }
-    write_set_.emplace_back(key, tuple, val);
-
-    FINISH_WRITE:
-    return;
-}
-
 ReadElement *TxExecutor::searchReadSet(uint64_t key) {
     for (auto itr = read_set_.begin(); itr != read_set_.end(); itr++) {
         if ((*itr).key_ == key) return &(*itr);
@@ -103,25 +111,6 @@ void TxExecutor::unlockWriteSet(std::vector<WriteElement>::iterator end) {
         desired = expected;
         desired.lock = 0;
         storeRelease((*itr).rcdptr_->tidword_.obj_, desired.obj_);
-    }
-}
-
-void TxExecutor::lockWriteSet() {
-    TIDword expected, desired;
-    for (auto itr = write_set_.begin(); itr != write_set_.end(); itr++) {
-        expected.obj_ = loadAcquire((*itr).rcdptr_->tidword_.obj_);
-        for (;;) {
-            if (expected.lock) {
-                this->status_ = TransactionStatus::Aborted; // w-w conflictは即abort
-                if (itr != write_set_.begin()) unlockWriteSet(itr);
-                return;
-            } else {
-                desired = expected;
-                desired.lock = 1;
-                if (compareExchange((*itr).rcdptr_->tidword_.obj_, expected.obj_, desired.obj_)) break;
-            }
-        }
-        max_wset_ = std::max(max_wset_, expected);
     }
 }
 
@@ -172,6 +161,22 @@ void TxExecutor::wal(std::uint64_t ctid) {
     }
 }
 
+void TxExecutor::write(uint64_t key, uint32_t val) {
+    if (searchWriteSet(key)) goto FINISH_WRITE;
+    Tuple *tuple;
+    ReadElement *re;
+    re = searchReadSet(key);
+    if (re) {   //HACK: 仕様がわかってないよ(田中先生も)
+        tuple = re->rcdptr_;
+    } else {
+        tuple = &Table[key];
+    }
+    write_set_.emplace_back(key, tuple, val);
+
+    FINISH_WRITE:
+    return;
+}
+
 void TxExecutor::writePhase() {
     TIDword tid_a, tid_b, tid_c;    // TIDの算出
     // (a) transaction中でRead/Writeの最大TIDより1大きい
@@ -200,10 +205,7 @@ void TxExecutor::writePhase() {
     write_set_.clear();
 }
 
-void TxExecutor::abort() {
-    read_set_.clear();
-    write_set_.clear();
-}
+
 
 
 
@@ -249,5 +251,5 @@ void TxExecutor::durableEpochWork(uint64_t &epoch_timer_start,
     if (loadAcquire(quit)) return;
   }
   if (log_buffer_pool_.current_buffer_==NULL) std::abort();
-  sres_lg_->local_wait_depoch_latency_ += rdtscp() - t;
+  // sres_lg_->local_wait_depoch_latency_ += rdtscp() - t;  NOTE: sres_lg_使ってないので
 }

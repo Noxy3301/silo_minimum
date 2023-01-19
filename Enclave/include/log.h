@@ -31,7 +31,7 @@ class LogRecord {
 
         LogRecord() : tid_(0), key_(0) {}
         LogRecord(uint64_t tid, uint32_t key, uint32_t val) : tid_(tid), key_(key) {
-            this->val_, val;
+            this->val_ = val;
         }
 
         int computeChkSum() {

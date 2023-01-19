@@ -18,7 +18,7 @@ class ReadElement : public OpElement {
     public:
         using OpElement::OpElement;
 
-        ReadElement(uint64_t key, Tuple *rcdptr, uint64_t val, TIDword tidword) : OpElement::OpElement(key, rcdptr) {
+        ReadElement(uint64_t key, Tuple *rcdptr, uint32_t val, TIDword tidword) : OpElement::OpElement(key, rcdptr) {
             tidword_.obj_ = tidword.obj_;
             this->val_ = val;
         }
@@ -33,14 +33,14 @@ class ReadElement : public OpElement {
     
     private:
         TIDword tidword_;
-        uint64_t val_;
+        uint32_t val_;
 };
 
 class WriteElement : public OpElement {
     public:
         using OpElement::OpElement;
 
-        WriteElement(uint64_t key, Tuple *rcdptr, uint64_t val) : OpElement::OpElement(key, rcdptr) {
+        WriteElement(uint64_t key, Tuple *rcdptr, uint32_t val) : OpElement::OpElement(key, rcdptr) {
             this->val_ = val;
         }
 
@@ -48,10 +48,10 @@ class WriteElement : public OpElement {
             return this->key_ < right.key_;
         }
 
-        uint64_t get_val() {
+        uint32_t get_val() {
             return val_;
         }
 
     private:
-        uint64_t val_;
+        uint32_t val_;
 };

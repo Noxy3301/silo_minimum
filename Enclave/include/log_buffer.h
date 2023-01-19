@@ -126,7 +126,6 @@ class LogBufferPool {
         void push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set, uint32_t val, bool new_epoch_begins);
         void publish();
         void return_buffer(LogBuffer *lb);
-        // void terminate(ResultLog &myres);
         void terminate();
 };
 
