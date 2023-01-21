@@ -139,3 +139,14 @@ uint64_t ecall_getAbortResult(int thid) {
 uint64_t ecall_getCommitResult(int thid) {
     return results[thid].local_commit_counts_;
 }
+
+uint64_t ecall_showDurableEpoch() {
+    uint64_t min_dl = __atomic_load_n(&(ThLocalDurableEpoch[0]), __ATOMIC_ACQUIRE);
+    for (unsigned int i=1; i < LOGGER_NUM; ++i) {
+        uint64_t dl = __atomic_load_n(&(ThLocalDurableEpoch[i]), __ATOMIC_ACQUIRE);
+        if (dl < min_dl) {
+            min_dl = dl;
+        }
+    }
+    return min_dl;
+}

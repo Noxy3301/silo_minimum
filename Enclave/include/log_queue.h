@@ -15,12 +15,14 @@ class LogBuffer;
 class LogQueue {
     private:
         std::atomic<unsigned int> my_mutex_;
+        std::atomic<unsigned int> logging_status_mutex_;    // condition_variableの代用
         std::mutex mutex_;
         std::condition_variable cv_deq_;
         std::map<uint64_t, std::vector<LogBuffer*>> queue_;
         std::size_t capacity_ = 1000;
         std::atomic<bool> quit_;
-        std::chrono::microseconds timeout_;
+        // std::chrono::microseconds timeout_;
+        int timeout_us_;
 
         void my_lock() {
             for (;;) {
@@ -33,12 +35,25 @@ class LogQueue {
         void my_unlock() {
             my_mutex_.store(0);
         }
+
+        void logging_lock() {
+            for (;;) {
+                unsigned int lock = 0;
+                if (logging_status_mutex_.compare_exchange_strong(lock, 1)) return;
+                waitTime_ns(30);
+            }
+        }
+
+        void logging_unlock() {
+            logging_status_mutex_.store(0);
+        }
     
     public:
         LogQueue() {    // constructor
             my_mutex_.store(0);
             quit_.store(false);
-            timeout_ = std::chrono::microseconds((int)(EPOCH_TIME*1000));
+            // timeout_ = std::chrono::microseconds((int)(EPOCH_TIME*1000));
+            timeout_us_ = (int)EPOCH_TIME*1000;
         }
 
         void enq(LogBuffer* x) {    //入れる方
@@ -47,13 +62,23 @@ class LogQueue {
                 auto &v = queue_[x->min_epoch_];
                 v.emplace_back(x);
             }   // ここでmutex_のlockが解放される
-            cv_deq_.notify_one();
+            logging_unlock();
+            // cv_deq_.notify_one();
         }
 
         bool wait_deq() {
             if (quit_.load() || !queue_.empty()) return true;
             std::unique_lock<std::mutex> lock(mutex_);
-            return cv_deq_.wait_for(lock, timeout_, [this]{return quit_.load() || !queue_.empty();});
+            unsigned int expected = 0;
+            uint64_t wait_start = rdtscp();
+            uint64_t wait_current = rdtscp();
+            while (wait_current - wait_start < timeout_us_ * CLOCKS_PER_US) {   // timeoutしていないなら
+                if (quit_.load() || !queue_.empty()) return true;
+                if (logging_status_mutex_.compare_exchange_strong(expected, 1)) return true;    // loggerがloggingできる状態であるかをCASでlockを試みつつ確認
+                wait_current = rdtscp();
+            }
+            return false;
+            // return cv_deq_.wait_for(lock, timeout_us_, [this]{return quit_.load() || !queue_.empty();});
         }
 
         bool quit() {
@@ -93,6 +118,7 @@ class LogQueue {
 
         void terminate() {
             quit_.store(true);
-            cv_deq_.notify_all();
+            logging_unlock();
+            // cv_deq_.notify_all();
         }
 };

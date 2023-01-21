@@ -12,3 +12,5 @@ extern void ecall_logger_th(int thid);
 
 extern uint64_t ecall_getAbortResult(int thid);
 extern uint64_t ecall_getCommitResult(int thid);
+
+extern uint64_t ecall_showDurableEpoch();

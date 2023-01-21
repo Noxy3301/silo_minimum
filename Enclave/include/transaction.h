@@ -45,7 +45,7 @@ class TxExecutor {
 
         void begin();
         void read(uint64_t key);
-        void write(uint64_t key, uint32_t val = 0);
+        void write(uint64_t key, uint64_t val = 0);
         ReadElement *searchReadSet(uint64_t key);
         WriteElement *searchWriteSet(uint64_t key);
         void unlockWriteSet();

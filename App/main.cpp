@@ -139,6 +139,7 @@ void displayResult() {
     cout << "throughput[tps]:\t" << result << endl;
 }
 
+std::atomic<int> ocall_count(0);
 
 // MARK: main function
 
@@ -191,6 +192,10 @@ int main() {
 
 
     displayResult();
+
+    std::cout << "[info]\tcall_count(write):\t" << ocall_count.load() << std::endl;
+    uint64_t ret_durableEpoch = ecall_showDurableEpoch();
+    std::cout << "[info]\tdurableEpoch:\t" << ret_durableEpoch << std::endl;
 
     return 0;
 }
