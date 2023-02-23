@@ -98,10 +98,11 @@ void displayParameter() {
     cout << "#buffer_size:\t" << BUFFER_SIZE << endl;
 }
 
-void displayResult() {
-    uint64_t total_commit_counts_ = 0;
-    uint64_t total_abort_counts_ = 0;
+// displayResultの局所変数として使ってたけど計測の簡略化を行うために大域変数にしてるよ
+uint64_t total_commit_counts_ = 0;
+uint64_t total_abort_counts_ = 0;
 
+void displayResult() {
     for (int i = 0; i < THREAD_NUM; i++) {
         cout << "thread#" << i << "\tcommit: " << SiloResult[i].local_commit_counts_ << "\tabort:" << SiloResult[i].local_abort_counts_ << endl;
         total_commit_counts_ += SiloResult[i].local_commit_counts_;
@@ -173,6 +174,15 @@ int main() {
     std::cout << "[info]\tcall_count(write):\t" << ocall_count.load() << std::endl;
     uint64_t ret_durableEpoch = ecall_showDurableEpoch();
     std::cout << "[info]\tdurableEpoch:\t" << ret_durableEpoch << std::endl;
+
+    std::cout << "=== for copy&paste ===" << std::endl;
+    std::cout << total_commit_counts_ << std::endl;
+    std::cout << total_abort_counts_ << std::endl;
+    std::cout << (double)total_abort_counts_ / (double)(total_commit_counts_ + total_abort_counts_) << std::endl;
+    uint64_t result = total_commit_counts_ / EXTIME;
+    std::cout << powl(10.0, 9.0) / result * THREAD_NUM << std::endl;;  // latency
+    std::cout << ret_durableEpoch << std::endl;
+    std::cout << result << std::endl;; // throughput
 
     return 0;
 }
