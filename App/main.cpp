@@ -60,10 +60,6 @@ void LoggerAffinity::init(unsigned worker_num, unsigned logger_num) {
     }
 }
 
-// MARK: global variables
-
-bool threadReady = false;
-
 // MARK: siloResult
 
 std::vector<Result> SiloResult(THREAD_NUM);
@@ -86,20 +82,6 @@ void logger_th(int thid) {
 
 // MARK: utilities
 
-// void waitForReady(const std::vector<int> &readys) {
-//     while (true) {
-//         bool failed = false;
-//         for (const auto &ready : readys) {
-//             if (!__atomic_load_n(&ready, __ATOMIC_ACQUIRE)) {
-//                 failed = true;
-//                 break;
-//             }
-//         }
-//         if (!failed) break;
-//     }
-// }
-
-
 void displayParameter() {
     cout << "#clocks_per_us:\t" << CLOCKS_PER_US << endl;
     cout << "#epoch_time:\t" << EPOCH_TIME << endl;
@@ -112,8 +94,8 @@ void displayParameter() {
     cout << "#ycsb:\t\t" << YCSB << endl;
     cout << "#zipf_skew:\t" << ZIPF_SKEW << endl;
     cout << "#logger_num:\t" << LOGGER_NUM << endl;
-    // cout << "#buffer_num:\t" << BUFFER_NUM << endl;
-    // cout << "#buffer_size:\t" << BUFFER_SIZE << endl;
+    cout << "#buffer_num:\t" << BUFFER_NUM << endl;
+    cout << "#buffer_size:\t" << BUFFER_SIZE << endl;
 }
 
 void displayResult() {
@@ -126,13 +108,13 @@ void displayResult() {
         total_abort_counts_ += SiloResult[i].local_abort_counts_;
     }
 
-    cout << "commit_counts_:\t" << total_commit_counts_ << endl;
-    cout << "abort_counts_:\t" << total_abort_counts_ << endl;
-    cout << "abort_rate:\t" << (double)total_abort_counts_ / (double)(total_commit_counts_ + total_abort_counts_) << endl;
+    cout << "[info]\tcommit_counts_:\t" << total_commit_counts_ << endl;
+    cout << "[info]\tabort_counts_:\t" << total_abort_counts_ << endl;
+    cout << "[info]\tabort_rate:\t" << (double)total_abort_counts_ / (double)(total_commit_counts_ + total_abort_counts_) << endl;
 
     uint64_t result = total_commit_counts_ / EXTIME;
-    cout << "latency[ns]:\t" << powl(10.0, 9.0) / result * THREAD_NUM << endl;
-    cout << "throughput[tps]:\t" << result << endl;
+    cout << "[info]\tlatency[ns]:\t" << powl(10.0, 9.0) / result * THREAD_NUM << endl;
+    cout << "[info]\tthroughput[tps]:\t" << result << endl;
 }
 
 std::atomic<int> ocall_count(0);
@@ -141,7 +123,7 @@ std::atomic<int> ocall_count(0);
 
 int main() {
 
-    chrono::system_clock::time_point p1, p2, p3, p4;
+    chrono::system_clock::time_point p1, p2, p3, p4, p5;
 
     displayParameter();
 
@@ -164,30 +146,30 @@ int main() {
         }
     }
 
-    p3 = chrono::system_clock::now();
-
     ecall_waitForReady();
-    __atomic_store_n(&threadReady, true, __ATOMIC_RELEASE);
+    p3 = chrono::system_clock::now();
     ecall_sendStart();
     std::this_thread::sleep_for(std::chrono::milliseconds(1000 * EXTIME));
     ecall_sendQuit();
 
+    p4 = chrono::system_clock::now();
+
     for (auto &th : lthv) th.join();
     for (auto &th : wthv) th.join();
 
-    p4 = chrono::system_clock::now();
+    p5 = chrono::system_clock::now();
 
     double duration1 = static_cast<double>(chrono::duration_cast<chrono::microseconds>(p2 - p1).count() / 1000.0);
     double duration2 = static_cast<double>(chrono::duration_cast<chrono::microseconds>(p3 - p2).count() / 1000.0);
     double duration3 = static_cast<double>(chrono::duration_cast<chrono::microseconds>(p4 - p3).count() / 1000.0);
+    double duration4 = static_cast<double>(chrono::duration_cast<chrono::microseconds>(p5 - p4).count() / 1000.0);
+
+    displayResult();
 
     std::cout << "[info]\tmakeDB:\t" << duration1/1000 << "s.\n";
     std::cout << "[info]\tcreateThread:\t" << duration2/1000 << "s.\n";
     std::cout << "[info]\texecutionTime:\t" << duration3/1000 << "s.\n";
-
-
-    displayResult();
-
+    std::cout << "[info]\tdestroyThread:\t" << duration3/1000 << "s.\n";
     std::cout << "[info]\tcall_count(write):\t" << ocall_count.load() << std::endl;
     uint64_t ret_durableEpoch = ecall_showDurableEpoch();
     std::cout << "[info]\tdurableEpoch:\t" << ret_durableEpoch << std::endl;
