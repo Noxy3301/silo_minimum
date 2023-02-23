@@ -170,7 +170,7 @@ int main() {
     std::cout << "[info]\tmakeDB:\t" << duration1/1000 << "s.\n";
     std::cout << "[info]\tcreateThread:\t" << duration2/1000 << "s.\n";
     std::cout << "[info]\texecutionTime:\t" << duration3/1000 << "s.\n";
-    std::cout << "[info]\tdestroyThread:\t" << duration3/1000 << "s.\n";
+    std::cout << "[info]\tdestroyThread:\t" << duration4/1000 << "s.\n";
     std::cout << "[info]\tcall_count(write):\t" << ocall_count.load() << std::endl;
     uint64_t ret_durableEpoch = ecall_showDurableEpoch();
     std::cout << "[info]\tdurableEpoch:\t" << ret_durableEpoch << std::endl;
