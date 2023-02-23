@@ -32,6 +32,7 @@ uint64_t GlobalEpoch = 1;
 std::vector<returnResult> results(THREAD_NUM);
 std::atomic<Logger *> logs[LOGGER_NUM];
 Notifier notifier;
+std::vector<int> readys(THREAD_NUM);
 
 bool start = false;
 bool quit = false;
@@ -40,6 +41,21 @@ bool quit = false;
 
 // NOTE: enclave内で__atomic系の処理できたっけ？できるなら直でそのまま呼びたい
 // というかquitは管理しなくてもいいかも
+
+void ecall_waitForReady() {
+    while (true) {
+        bool failed = false;
+        for (const auto &ready : readys) {
+            if (!__atomic_load_n(&ready, __ATOMIC_ACQUIRE)) {
+                failed = true;
+                break;
+            }
+        }
+        if (!failed) break;
+    }
+}
+
+
 void ecall_sendStart() {
     __atomic_store_n(&start, true, __ATOMIC_RELEASE);
 }
@@ -74,6 +90,8 @@ void ecall_worker_th(int thid, int gid) {
         waitTime_ns(100);
     }
     logger->add_tx_executor(trans);
+
+    __atomic_store_n(&readys[thid], 1, __ATOMIC_RELEASE);
 
     while (true) {
         if (__atomic_load_n(&start, __ATOMIC_ACQUIRE)) break;

@@ -70,12 +70,7 @@ std::vector<Result> SiloResult(THREAD_NUM);
 
 // MARK: thread function
 
-void worker_th(int thid, int gid, int &ready) {
-    __atomic_store_n(&ready, 1, __ATOMIC_RELEASE);
-    while (true) {
-        if (__atomic_load_n(&threadReady, __ATOMIC_ACQUIRE)) break;
-    }
-
+void worker_th(int thid, int gid) {
     returnResult ret;
     ecall_worker_th(thid, gid);  // thread.emplace_backで直接渡せる気がしないし、こっちで受け取ってResultの下処理をしたい
     ret.local_abort_counts_ = ecall_getAbortResult(thid);
@@ -91,18 +86,19 @@ void logger_th(int thid) {
 
 // MARK: utilities
 
-void waitForReady(const std::vector<int> &readys) {
-    while (true) {
-        bool failed = false;
-        for (const auto &ready : readys) {
-            if (!__atomic_load_n(&ready, __ATOMIC_ACQUIRE)) {
-                failed = true;
-                break;
-            }
-        }
-        if (!failed) break;
-    }
-}
+// void waitForReady(const std::vector<int> &readys) {
+//     while (true) {
+//         bool failed = false;
+//         for (const auto &ready : readys) {
+//             if (!__atomic_load_n(&ready, __ATOMIC_ACQUIRE)) {
+//                 failed = true;
+//                 break;
+//             }
+//         }
+//         if (!failed) break;
+//     }
+// }
+
 
 void displayParameter() {
     cout << "#clocks_per_us:\t" << CLOCKS_PER_US << endl;
@@ -155,7 +151,6 @@ int main() {
     LoggerAffinity affin;
     affin.init(THREAD_NUM, LOGGER_NUM); // logger/worker実行threadの決定
 
-    std::vector<int> readys(THREAD_NUM);
     std::vector<std::thread> lthv;
     std::vector<std::thread> wthv;
 
@@ -165,13 +160,13 @@ int main() {
     for (auto itr = affin.nodes_.begin(); itr != affin.nodes_.end(); itr++, j++) {
         lthv.emplace_back(logger_th, j);    // TODO: add some arguments
         for (auto wcpu = itr->worker_cpu_.begin(); wcpu != itr->worker_cpu_.end(); wcpu++, i++) {
-            wthv.emplace_back(worker_th, i, j, std::ref(readys[i]));  // TODO: add some arguments
+            wthv.emplace_back(worker_th, i, j);  // TODO: add some arguments
         }
     }
 
     p3 = chrono::system_clock::now();
 
-    waitForReady(readys);
+    ecall_waitForReady();
     __atomic_store_n(&threadReady, true, __ATOMIC_RELEASE);
     ecall_sendStart();
     std::this_thread::sleep_for(std::chrono::milliseconds(1000 * EXTIME));

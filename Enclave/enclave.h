@@ -4,6 +4,7 @@
 
 extern void ecall_initDB();
 
+void ecall_waitForReady();
 extern void ecall_sendStart();
 extern void ecall_sendQuit();
 
