@@ -1,4 +1,5 @@
 #include "include/util.h"
+#include <random>
 
 bool chkEpochLoaded() {
     uint64_t nowepo = atomicLoadGE();
@@ -17,7 +18,25 @@ void leaderWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop) {
     }
 }
 
+std::mt19937 mt{std::random_device{}()};
+void FisherYates(std::vector<int>& v){
+    int n = v.size();
+    for(int i = n-1; i >= 0; i --){
+        std::uniform_int_distribution<int> dist(0, i);
+        int j = dist(mt);
+        std::swap(v[i], v[j]);
+    }
+}
+
 void ecall_initDB() {
+    std::vector<int> random_array;
+    for (int i = 0; i < TUPLE_NUM; i++) {
+        random_array.push_back(i);
+    }
+    if (INDEX_PATTERN == 1) {
+        FisherYates(random_array);
+    }
+    
     // init Table
     for (int i = 0; i < TUPLE_NUM; i++) {
         Tuple *tmp;
@@ -25,7 +44,7 @@ void ecall_initDB() {
         tmp->tidword_.epoch = 1;
         tmp->tidword_.latest = 1;
         tmp->tidword_.lock = 0;
-        tmp->key_ = i;
+        tmp->key_ = random_array[i];
         tmp->val_ = 0;
     }
 
