@@ -128,6 +128,8 @@ void ecall_worker_th(int thid, int gid) {
             storeRelease(myres.local_commit_counts_, loadAcquire(myres.local_commit_counts_) + 1);
         } else {
             trans.abort();
+            assert(trans.abort_res_ != 0);
+            myres.local_abort_res_counts_[trans.abort_res_ - 1]++;
             myres.local_abort_counts_++;
             goto RETRY;
         }
@@ -154,6 +156,10 @@ uint64_t ecall_getAbortResult(int thid) {
 
 uint64_t ecall_getCommitResult(int thid) {
     return results[thid].local_commit_counts_;
+}
+
+uint64_t ecall_getAbortResResult(int thid, int res) {
+    return results[thid].local_abort_res_counts_[res];
 }
 
 uint64_t ecall_showDurableEpoch() {
