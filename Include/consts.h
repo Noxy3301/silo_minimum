@@ -25,6 +25,9 @@
 // show result details flag
 #define SHOW_DETAILS 0
 
+// no wait optimization
+#define NO_WAIT_LOCKING_IN_VALIDATION 1
+
 // Index pattern
 // 0: ideal  - Key can be used as an array index. Thus, O(1) [Default]
 // 1: linear - No index, need to linear scan to search item.

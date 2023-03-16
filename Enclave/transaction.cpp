@@ -136,16 +136,19 @@ void TxExecutor::unlockWriteSet(std::vector<WriteElement>::iterator end) {
 void TxExecutor::lockWriteSet() {
     TIDword expected, desired;
     for (auto itr = write_set_.begin(); itr != write_set_.end(); itr++) {
-        expected.obj_ = loadAcquire((*itr).rcdptr_->tidword_.obj_);
         for (;;) {
+            expected.obj_ = loadAcquire((*itr).rcdptr_->tidword_.obj_);
             if (expected.lock) {
+#if NO_WAIT_LOCKING_IN_VALIDATION
                 this->status_ = TransactionStatus::Aborted; // w-w conflictは即abort
                 if (itr != write_set_.begin()) unlockWriteSet(itr);
                 return;
+#endif
             } else {
                 desired = expected;
                 desired.lock = 1;
-                if (compareExchange((*itr).rcdptr_->tidword_.obj_, expected.obj_, desired.obj_)) break;
+                if (compareExchange((*itr).rcdptr_->tidword_.obj_, expected.obj_, desired.obj_))
+                break;
             }
         }
         max_wset_ = std::max(max_wset_, expected);
@@ -156,10 +159,12 @@ bool TxExecutor::validationPhase() {
     // Phase1, sorting write_set_
     sort(write_set_.begin(), write_set_.end());
     lockWriteSet();
+#if NO_WAIT_LOCKING_IN_VALIDATION
     if (this->status_ == TransactionStatus::Aborted) {
         abort_res_ = 1;
         return false;  // w-w conflict検知時に弾く用
     }
+#endif
     asm volatile("":: : "memory");
     atomicStoreThLocalEpoch(thid_, atomicLoadGE());
     asm volatile("":: : "memory");
