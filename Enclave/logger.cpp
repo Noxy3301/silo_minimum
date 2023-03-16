@@ -149,10 +149,12 @@ void Logger::show_result() {
     double cps = CLOCKS_PER_US*1e6;
     static std::mutex mtx;
     std::lock_guard<std::mutex> lock(mtx);
+#if SHOW_DETAILS
     cout << "Logger#"<<thid_
          <<" byte_count[B]=" << byte_count_
          <<" write_latency[s]=" << write_latency_/cps
          <<" throughput[B/s]=" << byte_count_/(write_latency_/cps)
          <<" wait_latency[s]=" << wait_latency_/cps
          << endl;
+#endif
 }

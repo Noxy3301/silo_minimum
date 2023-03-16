@@ -23,7 +23,13 @@ using std::endl;
 #include "include/util.h"
 #include "include/zipf.h"
 
+#include "OCH.cpp"
+
+#if INDEX_PATTERN == 2
+OptCuckoo<Tuple*> Table(TUPLE_NUM*2);
+#else
 std::vector<Tuple> Table(TUPLE_NUM);
+#endif
 std::vector<uint64_t> ThLocalEpoch(THREAD_NUM);
 std::vector<uint64_t> CTIDW(THREAD_NUM);
 std::vector<uint64_t> ThLocalDurableEpoch(LOGGER_NUM);

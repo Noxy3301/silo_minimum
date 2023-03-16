@@ -111,6 +111,7 @@ uint64_t tocal_abort_res_counts_[4] = {0};
 
 void displayResult() {
     for (int i = 0; i < THREAD_NUM; i++) {
+#if SHOW_DETAILS
         cout << 
         "thread#" << i << 
         "\tcommit: " << SiloResult[i].local_commit_counts_ << 
@@ -120,7 +121,7 @@ void displayResult() {
         "\tabort_VP3: " << SiloResult[i].local_abort_res_counts_[2] <<  // aborted by validation phase 3
         "\tabort_bNULL: " << SiloResult[i].local_abort_res_counts_[3] <<// aborted by NULL current buffer    
         endl;
-
+#endif
         total_commit_counts_ += SiloResult[i].local_commit_counts_;
         total_abort_counts_ += SiloResult[i].local_abort_counts_;
         tocal_abort_res_counts_[0] += SiloResult[i].local_abort_res_counts_[0];
@@ -129,7 +130,7 @@ void displayResult() {
         tocal_abort_res_counts_[3] += SiloResult[i].local_abort_res_counts_[3];
 
     }
-
+#if SHOW_DETAILS
     cout << "[info]\tcommit_counts_:\t" << total_commit_counts_ << endl;
     cout << "[info]\tabort_counts_:\t" << total_abort_counts_ << endl;
     cout << "[info]\t-abort_validation1:\t" << tocal_abort_res_counts_[0] << endl;
@@ -142,6 +143,7 @@ void displayResult() {
     uint64_t result = total_commit_counts_ / EXTIME;
     cout << "[info]\tlatency[ns]:\t" << powl(10.0, 9.0) / result * THREAD_NUM << endl;
     cout << "[info]\tthroughput[tps]:\t" << result << endl;
+#endif
 }
 
 std::atomic<int> ocall_count(0);
@@ -151,9 +153,9 @@ std::atomic<int> ocall_count(0);
 int main() {
 
     chrono::system_clock::time_point p1, p2, p3, p4, p5;
-
+#if SHOW_DETAILS
     displayParameter();
-
+#endif
     p1 = chrono::system_clock::now();
     
     ecall_initDB();
@@ -191,16 +193,16 @@ int main() {
     double duration3 = static_cast<double>(chrono::duration_cast<chrono::microseconds>(p4 - p3).count() / 1000.0);
     double duration4 = static_cast<double>(chrono::duration_cast<chrono::microseconds>(p5 - p4).count() / 1000.0);
 
+    uint64_t ret_durableEpoch = ecall_showDurableEpoch();
     displayResult();
-
+#if SHOW_DETAILS
     std::cout << "[info]\tmakeDB:\t" << duration1/1000 << "s.\n";
     std::cout << "[info]\tcreateThread:\t" << duration2/1000 << "s.\n";
     std::cout << "[info]\texecutionTime:\t" << duration3/1000 << "s.\n";
     std::cout << "[info]\tdestroyThread:\t" << duration4/1000 << "s.\n";
     std::cout << "[info]\tcall_count(write):\t" << ocall_count.load() << std::endl;
-    uint64_t ret_durableEpoch = ecall_showDurableEpoch();
     std::cout << "[info]\tdurableEpoch:\t" << ret_durableEpoch << std::endl;
-
+#endif
     std::cout << "=== for copy&paste ===" << std::endl;
     std::cout << total_commit_counts_ << std::endl;
     std::cout << total_abort_counts_ << std::endl;

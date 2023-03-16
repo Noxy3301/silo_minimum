@@ -40,6 +40,8 @@ void TxExecutor::read(uint64_t key) {
                 break;
             }
         }
+#elif INDEX_PATTERN == 2
+        tuple = Table.get(key);
 #endif
     
     expected.obj_ = loadAcquire(tuple->tidword_.obj_);
@@ -87,6 +89,8 @@ void TxExecutor::write(uint64_t key, uint64_t val) {
                 break;
             }
         }
+#elif INDEX_PATTERN == 2
+        tuple = Table.get(key);
 #endif
     }
     write_set_.emplace_back(key, tuple, val);

@@ -3,7 +3,6 @@
 #define THREAD_NUM 9
 #define LOGGER_NUM 3
 #define TUPLE_NUM 1000000
-//#define TUPLE_NUM 100
 #define EXTIME 3
 #define CACHE_LINE_SIZE 64
 
@@ -23,11 +22,14 @@
 #define PAGE_SIZE 4096
 #define LOGSET_SIZE 1000
 
+// show result details flag
+#define SHOW_DETAILS 0
+
 // Index pattern
 // 0: ideal  - Key can be used as an array index. Thus, O(1) [Default]
 // 1: linear - No index, need to linear scan to search item.
 // 2: OCH    - Using Optimistic Cuckoo Hashing as index. wip
-#define INDEX_PATTERN 0
+#define INDEX_PATTERN 2
 
 #include <stdint.h>
 
