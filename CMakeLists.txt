@@ -11,7 +11,11 @@ find_package(Threads REQUIRED)
 # file(GLOB_RECURSE PROJECT_HEADERS *.h)
 
 file(GLOB SILO_SOURCES
-    "App/main.cpp" "Enclave/*.cpp"
+    "App/result.cpp"
+    "App/util.cpp"
+    "App/logger_affinity.cpp"
+    "App/main.cpp"
+    "Enclave/*.cpp"
 )
 
 #set(CMAKE_CXX_FLAGS "-pthread -fpermissive -Wreturn-type")

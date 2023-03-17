@@ -14,7 +14,7 @@
 
 #include "../../Include/result.h"
 
-#include "../../App/main.h"
+#include "../../App/include/main.h"
 
 #define LOG_BUFFER_SIZE (BUFFER_SIZE*1024/sizeof(LogRecord))
 #define LOG_ALLOC_SIZE (LOG_BUFFER_SIZE+512/sizeof(LogRecord)+1)

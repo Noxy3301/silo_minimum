@@ -6,7 +6,7 @@
 #include "include/notifier.h"
 // #include "include/debug.h"
 #include "include/logger.h"
-#include "../App/main.h"
+#include "../App/include/main.h"
 
 void PepochFile::open() {
     fd_ = ::open(file_name_.c_str(), O_CREAT|O_TRUNC|O_RDWR, 0644);

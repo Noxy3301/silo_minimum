@@ -8,17 +8,8 @@
 #include "include/log.h"
 #include "include/util.h"
 
-TxExecutor::TxExecutor(int thid) : thid_(thid) {
-    read_set_.reserve(MAX_OPE);
-    write_set_.reserve(MAX_OPE);
-    pro_set_.reserve(MAX_OPE);
-
-    max_rset_.obj_ = 0;
-    max_wset_.obj_ = 0;
-}
-
 void TxExecutor::begin() {
-    status_ = TransactionStatus::InFlight;
+    status_ = TransactionStatus::inFlight;
     max_wset_.obj_ = 0;
     max_rset_.obj_ = 0;
     abort_res_ = 0;
@@ -26,7 +17,7 @@ void TxExecutor::begin() {
 }
 
 void TxExecutor::read(uint64_t key) {
-    TIDword expected, check;
+    Tidword expected, check;
     if (searchReadSet(key) || searchWriteSet(key)) goto FINISH_READ;
     Tuple *tuple;
     
@@ -114,7 +105,7 @@ WriteElement *TxExecutor::searchWriteSet(std::uint64_t key) {
 }
 
 void TxExecutor::unlockWriteSet() {
-    TIDword expected, desired;
+    Tidword expected, desired;
     for (auto itr = write_set_.begin(); itr != write_set_.end(); itr++) {
         expected.obj_ = loadAcquire((*itr).rcdptr_->tidword_.obj_);
         desired = expected;
@@ -124,7 +115,7 @@ void TxExecutor::unlockWriteSet() {
 }
 
 void TxExecutor::unlockWriteSet(std::vector<WriteElement>::iterator end) {
-    TIDword expected, desired;
+    Tidword expected, desired;
     for (auto itr = write_set_.begin(); itr != end; itr++) {
         expected.obj_ = loadAcquire((*itr).rcdptr_->tidword_.obj_);
         desired = expected;
@@ -134,13 +125,13 @@ void TxExecutor::unlockWriteSet(std::vector<WriteElement>::iterator end) {
 }
 
 void TxExecutor::lockWriteSet() {
-    TIDword expected, desired;
+    Tidword expected, desired;
     for (auto itr = write_set_.begin(); itr != write_set_.end(); itr++) {
         for (;;) {
             expected.obj_ = loadAcquire((*itr).rcdptr_->tidword_.obj_);
             if (expected.lock) {
 #if NO_WAIT_LOCKING_IN_VALIDATION
-                this->status_ = TransactionStatus::Aborted; // w-w conflictは即abort
+                this->status_ = TransactionStatus::aborted; // w-w conflictは即abort
                 if (itr != write_set_.begin()) unlockWriteSet(itr);
                 return;
 #endif
@@ -160,8 +151,8 @@ bool TxExecutor::validationPhase() {
     sort(write_set_.begin(), write_set_.end());
     lockWriteSet();
 #if NO_WAIT_LOCKING_IN_VALIDATION
-    if (this->status_ == TransactionStatus::Aborted) {
-        abort_res_ = 1;
+    if (this->status_ == TransactionStatus::aborted) {
+        this->result_->local_abort_by_validation1_++;
         return false;  // w-w conflict検知時に弾く用
     }
 #endif
@@ -169,13 +160,13 @@ bool TxExecutor::validationPhase() {
     atomicStoreThLocalEpoch(thid_, atomicLoadGE());
     asm volatile("":: : "memory");
     // Phase2, Read validation
-    TIDword check;
+    Tidword check;
     for (auto itr = read_set_.begin(); itr != read_set_.end(); itr++) {
         // 1. tid of read_set_ changed from it that was got in Read Phase.
         check.obj_ = loadAcquire((*itr).rcdptr_->tidword_.obj_);
         if ((*itr).get_tidword().epoch != check.epoch || (*itr).get_tidword().TID != check.TID) {
-            this->status_ = TransactionStatus::Aborted;
-            abort_res_ = 2;
+            this->status_ = TransactionStatus::aborted;
+            this->result_->local_abort_by_validation2_++;
             unlockWriteSet();
             return false;
         }
@@ -183,8 +174,8 @@ bool TxExecutor::validationPhase() {
         
         // 3. the tuple is locked and it isn't included by its write set.
         if (check.lock && !searchWriteSet((*itr).key_)) {
-            this->status_ = TransactionStatus::Aborted;
-            abort_res_ = 3;
+            this->status_ = TransactionStatus::aborted;
+            this->result_->local_abort_by_validation3_++;
             unlockWriteSet();
             return false;
         }
@@ -192,13 +183,13 @@ bool TxExecutor::validationPhase() {
     }
 
     // goto Phase 3
-    this->status_ = TransactionStatus::Committed;
+    this->status_ = TransactionStatus::committed;
     return true;
 }
 
 void TxExecutor::wal(std::uint64_t ctid) {
-    TIDword old_tid;
-    TIDword new_tid;
+    Tidword old_tid;
+    Tidword new_tid;
     old_tid.obj_ = loadAcquire(CTIDW[thid_]);
     new_tid.obj_ = ctid;
     bool new_epoch_begins = (old_tid.epoch != new_tid.epoch);
@@ -210,7 +201,7 @@ void TxExecutor::wal(std::uint64_t ctid) {
 }
 
 void TxExecutor::writePhase() {
-    TIDword tid_a, tid_b, tid_c;    // TIDの算出
+    Tidword tid_a, tid_b, tid_c;    // TIDの算出
     // (a) transaction中でRead/Writeの最大TIDより1大きい
     tid_a = std::max(max_wset_, max_rset_);
     tid_a.TID++;
@@ -220,7 +211,7 @@ void TxExecutor::writePhase() {
     // (c) 上位32bitがcurrent epoch
     tid_c.epoch = ThLocalEpoch[thid_];
 
-    TIDword maxtid = std::max({tid_a, tid_b, tid_c});
+    Tidword maxtid = std::max({tid_a, tid_b, tid_c});
     maxtid.lock = 0;
     maxtid.latest = 1;
     mrctid_ = maxtid;
@@ -252,13 +243,13 @@ bool TxExecutor::pauseCondition() {
 void TxExecutor::epochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop) {
     waitTime_ns(1*1000);
     if (thid_ == 0) leaderWork(epoch_timer_start, epoch_timer_stop);
-    TIDword old_tid;
+    Tidword old_tid;
     old_tid.obj_ = loadAcquire(CTIDW[thid_]);
     // load GE
     atomicStoreThLocalEpoch(thid_, atomicLoadGE());
     uint64_t new_epoch = loadAcquire(ThLocalEpoch[thid_]);
     if (old_tid.epoch != new_epoch) {
-        TIDword tid;
+        Tidword tid;
         tid.epoch = new_epoch;
         tid.lock = 0;
         tid.latest = 1;
@@ -286,7 +277,7 @@ void TxExecutor::durableEpochWork(uint64_t &epoch_timer_start,
     if (loadAcquire(quit)) return;
   }
   if (log_buffer_pool_.current_buffer_==NULL) std::abort();
-  abort_res_ = 4;
+  this->result_->local_abort_by_null_buffer_++;
   // sres_lg_->local_wait_depoch_latency_ += rdtscp() - t;
   // NOTE: sres_lg_使ってないので
 }

@@ -39,7 +39,7 @@ void LogBuffer::push(std::uint64_t tid, NotificationId &nid, std::vector<WriteEl
     }
     nid_set_.emplace_back(nid);
     // epoch
-    TIDword tidw;
+    Tidword tidw;
     tidw.obj_ = tid;
     std::uint64_t epoch = tidw.epoch;
     // A:1つのLogbufferに違うEpochのログが入らないかチェックしているらしい

@@ -4,7 +4,7 @@
 
 #include "cache_line_size.h"
 
-struct TIDword {
+struct Tidword {
     union {
         uint64_t obj_;
         struct {
@@ -15,16 +15,16 @@ struct TIDword {
             uint64_t epoch : 32;
         };
     };
-    TIDword() : epoch(0), TID(0), absent(false), latest(true), lock(false) {};
+    Tidword() : epoch(0), TID(0), absent(false), latest(true), lock(false) {};
 
-    bool operator == (const TIDword &right) const { return obj_ == right.obj_; }
-    bool operator != (const TIDword &right) const { return !operator == (right); }
-    bool operator < (const TIDword &right) const { return this->obj_ < right.obj_; }
+    bool operator == (const Tidword &right) const { return obj_ == right.obj_; }
+    bool operator != (const Tidword &right) const { return !operator == (right); }
+    bool operator < (const Tidword &right) const { return this->obj_ < right.obj_; }
 };
 
 class Tuple {
     public:
-        alignas(CACHE_LINE_SIZE) TIDword tidword_;
+        alignas(CACHE_LINE_SIZE) Tidword tidword_;
         uint64_t key_;
         uint32_t val_;
 };

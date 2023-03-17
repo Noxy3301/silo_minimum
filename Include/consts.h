@@ -24,6 +24,7 @@
 
 // show result details flag
 #define SHOW_DETAILS 0
+#define ADD_ANALYSIS 1
 
 // no wait optimization
 #define NO_WAIT_LOCKING_IN_VALIDATION 1
@@ -33,11 +34,3 @@
 // 1: linear - No index, need to linear scan to search item.
 // 2: OCH    - Using Optimistic Cuckoo Hashing as index. wip
 #define INDEX_PATTERN 2
-
-#include <stdint.h>
-
-struct returnResult {
-    uint64_t local_abort_counts_ = 0;
-    uint64_t local_commit_counts_ = 0;
-    uint64_t local_abort_res_counts_[4] = {0};
-};

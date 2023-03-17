@@ -8,7 +8,7 @@
 using std::cout;
 using std::endl;
 
-#include "../App/main.h"
+#include "../App/include/main.h"
 #include "enclave.h"
 #include "../Include/consts.h"
 
@@ -35,7 +35,7 @@ std::vector<uint64_t> CTIDW(THREAD_NUM);
 std::vector<uint64_t> ThLocalDurableEpoch(LOGGER_NUM);
 uint64_t DurableEpoch;
 uint64_t GlobalEpoch = 1;
-std::vector<returnResult> results(THREAD_NUM);
+std::vector<Result> results(THREAD_NUM);
 std::atomic<Logger *> logs[LOGGER_NUM];
 Notifier notifier;
 std::vector<int> readys(THREAD_NUM);
@@ -77,8 +77,8 @@ unsigned get_rand() {
 }
 
 void ecall_worker_th(int thid, int gid) {
-    TxExecutor trans(thid);
-    returnResult &myres = std::ref(results[thid]);
+    Result &myres = std::ref(results[thid]);
+    TxExecutor trans(thid, (Result *) &myres, std::ref(quit));
     uint64_t epoch_timer_start, epoch_timer_stop;
     
     unsigned init_seed;
@@ -134,8 +134,6 @@ void ecall_worker_th(int thid, int gid) {
             storeRelease(myres.local_commit_counts_, loadAcquire(myres.local_commit_counts_) + 1);
         } else {
             trans.abort();
-            assert(trans.abort_res_ != 0);
-            myres.local_abort_res_counts_[trans.abort_res_ - 1]++;
             myres.local_abort_counts_++;
             goto RETRY;
         }
@@ -156,16 +154,32 @@ void ecall_logger_th(int thid) {
     return;
 }
 
-uint64_t ecall_getAbortResult(int thid) {
-    return results[thid].local_abort_counts_;
-}
-
-uint64_t ecall_getCommitResult(int thid) {
-    return results[thid].local_commit_counts_;
-}
-
-uint64_t ecall_getAbortResResult(int thid, int res) {
-    return results[thid].local_abort_res_counts_[res];
+// [datatype]
+// 0: local_abort_counts
+// 1: local_commit_counts
+// 2: local_abort_by_validation1
+// 3: local_abort_by_validation2
+// 4: local_abort_by_validation3
+// 5: local_abort_by_null_buffer
+uint64_t ecall_getResult(int thid, int datatype) {
+    switch (datatype) {
+    case 0: // local_abort_counts
+        return results[thid].local_abort_counts_;
+    case 1: // local_commit_counts
+        return results[thid].local_commit_counts_;
+#if ADD_ANALYSIS
+    case 2: // local_abort_by_validation1
+        return results[thid].local_abort_by_validation1_;
+    case 3: // local_abort_by_validation2
+        return results[thid].local_abort_by_validation2_;
+    case 4: // local_abort_by_validation3
+        return results[thid].local_abort_by_validation3_;
+    case 5: // local_abort_by_null_buffer
+        return results[thid].local_abort_by_null_buffer_;
+#endif
+    default:
+        break;
+    }
 }
 
 uint64_t ecall_showDurableEpoch() {

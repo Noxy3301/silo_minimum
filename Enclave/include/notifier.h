@@ -21,7 +21,7 @@ class NotificationId {
         NotificationId() { NotificationId(0, 0, 0); }
 
         std::uint64_t epoch() {
-            TIDword tid;
+            Tidword tid;
             tid.obj_ = tid_;
             return tid.epoch;
         }
