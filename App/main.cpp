@@ -90,13 +90,12 @@ int main() {
     }
     SiloResult[0].displayAllResult();
 
-#if SHOW_DETAILS
-    std::cout << "[info]\tmakeDB:\t" << duration1/1000 << "s.\n";
-    std::cout << "[info]\tcreateThread:\t" << duration2/1000 << "s.\n";
-    std::cout << "[info]\texecutionTime:\t" << duration3/1000 << "s.\n";
-    std::cout << "[info]\tdestroyThread:\t" << duration4/1000 << "s.\n";
-    std::cout << "[info]\tcall_count(write):\t" << ocall_count.load() << std::endl;
-    std::cout << "[info]\tdurableEpoch:\t" << ret_durableEpoch << std::endl;
+    // std::cout << "[info]\tmakeDB:\t" << duration1/1000 << "s.\n";
+    // std::cout << "[info]\tcreateThread:\t" << duration2/1000 << "s.\n";
+    // std::cout << "[info]\texecutionTime:\t" << duration3/1000 << "s.\n";
+    // std::cout << "[info]\tdestroyThread:\t" << duration4/1000 << "s.\n";
+    // std::cout << "[info]\tcall_count(write):\t" << ocall_count.load() << std::endl;
+    // std::cout << "[info]\tdurableEpoch:\t" << ret_durableEpoch << std::endl;
 
     std::cout << "=== for copy&paste ===" << std::endl;
     std::cout << SiloResult[0].total_commit_counts_ << std::endl;
@@ -106,6 +105,6 @@ int main() {
     std::cout << powl(10.0, 9.0) / result * THREAD_NUM << std::endl;;  // latency
     std::cout << ret_durableEpoch << std::endl;
     std::cout << result << std::endl;; // throughput
-#endif
+    
     return 0;
 }

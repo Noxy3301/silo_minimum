@@ -31,7 +31,7 @@ class TxExecutor {
         TransactionStatus status_;
         unsigned int thid_;
         Result *result_;
-        uint64_t epoch_timer_start, epoch_timer_stop;
+        // uint64_t epoch_timer_start, epoch_timer_stop;
         const bool& quit_; // for thread termination control
         
         // for calcurate TID
@@ -63,8 +63,6 @@ class TxExecutor {
 
             max_rset_.obj_ = 0;
             max_wset_.obj_ = 0;
-            epoch_timer_start = rdtscp();
-            epoch_timer_stop = 0;
         }
 
         void begin();
@@ -84,5 +82,4 @@ class TxExecutor {
         bool pauseCondition();
         void epochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop);
         void durableEpochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop, const bool &quit);
-
 };

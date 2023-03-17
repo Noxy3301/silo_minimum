@@ -8,7 +8,6 @@
 
 #define MAX_OPE 10
 #define RRAITO 50
-#define YCSB false
 #define ZIPF_SKEW 0
 
 #define EPOCH_TIME 40
@@ -34,3 +33,8 @@
 // 1: linear - No index, need to linear scan to search item.
 // 2: OCH    - Using Optimistic Cuckoo Hashing as index. wip
 #define INDEX_PATTERN 2
+
+// Benchmark pattern
+// 0: Use TPC-C-NP benchmark
+// 1: Use YCSB benchmark
+#define BENCHMARK 1

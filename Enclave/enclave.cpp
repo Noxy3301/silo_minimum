@@ -24,6 +24,7 @@ using std::endl;
 #include "include/zipf.h"
 
 #include "OCH.cpp"
+// #include "include/tpcc.h"
 
 #if INDEX_PATTERN == 2
 OptCuckoo<Tuple*> Table(TUPLE_NUM*2);
@@ -80,7 +81,6 @@ void ecall_worker_th(int thid, int gid) {
     Result &myres = std::ref(results[thid]);
     TxExecutor trans(thid, (Result *) &myres, std::ref(quit));
     uint64_t epoch_timer_start, epoch_timer_stop;
-    
     unsigned init_seed;
     init_seed = get_rand();
     // sgx_read_rand((unsigned char *) &init_seed, 4);
@@ -101,6 +101,11 @@ void ecall_worker_th(int thid, int gid) {
         if (__atomic_load_n(&start, __ATOMIC_ACQUIRE)) break;
     }
 
+#if BENCHMARK == 0  // TPC-C-NP benchmark
+    TPCCWorkload<Tuple,void> workload;
+
+
+#elif BENCHMARK == 1    // YCSB benchmark
     if (thid == 0) epoch_timer_start = rdtscp();
 
     while (true) {
@@ -109,7 +114,7 @@ void ecall_worker_th(int thid, int gid) {
         makeProcedure(trans.pro_set_, rnd); // ocallで生成したprocedureをTxExecutorに移し替える
 
     RETRY:
-
+        // leaderWork
         if (thid == 0) leaderWork(epoch_timer_start, epoch_timer_stop);
         trans.durableEpochWork(epoch_timer_start, epoch_timer_stop, quit);
 
@@ -138,7 +143,7 @@ void ecall_worker_th(int thid, int gid) {
             goto RETRY;
         }
     }
-
+#endif
     trans.log_buffer_pool_.terminate();
     logger->worker_end(thid);
 

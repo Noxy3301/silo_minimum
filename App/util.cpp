@@ -14,7 +14,7 @@ void displayParameter() {
     cout << "#rratio:\t" << RRAITO << endl;
     cout << "#thread_num:\t" << THREAD_NUM << endl;
     cout << "#tuple_num:\t" << TUPLE_NUM << endl;
-    cout << "#ycsb:\t\t" << YCSB << endl;
+    // cout << "#ycsb:\t\t" << YCSB << endl;
     cout << "#zipf_skew:\t" << ZIPF_SKEW << endl;
     cout << "#logger_num:\t" << LOGGER_NUM << endl;
     cout << "#buffer_num:\t" << BUFFER_NUM << endl;
