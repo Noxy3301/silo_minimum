@@ -104,7 +104,6 @@ void ecall_worker_th(int thid, int gid) {
 #if BENCHMARK == 0  // TPC-C-NP benchmark
     TPCCWorkload<Tuple,void> workload;
 
-
 #elif BENCHMARK == 1    // YCSB benchmark
     if (thid == 0) epoch_timer_start = rdtscp();
 

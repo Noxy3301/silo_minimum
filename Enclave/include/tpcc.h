@@ -5,8 +5,6 @@
 #include <vector>
 #include <set>
 
-// #include "config.hh"
-// #include "debug.hh"
 #include "heap_object.hh"
 #include "procedure.h"
 #include "random.h"
