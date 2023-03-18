@@ -9,7 +9,7 @@
 #define CACHE_LINE_SIZE 64  // CPU cache line size
 
 // YCSB settings
-#define TUPLE_NUM 1000000   // Total number of records
+#define TUPLE_NUM 10   // Total number of records
 #define MAX_OPE 10          // Total number of operations per single transaction
 #define RRAITO 50           // read ratio of single transaction
 #define ZIPF_SKEW 0         // zipf skew (0 ~ 0.999...)

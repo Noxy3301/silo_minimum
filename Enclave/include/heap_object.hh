@@ -5,6 +5,8 @@
 #include <new>
 #include <type_traits>
 
+#include <iostream>
+
 /**
  * Heap object manager.
  * The instance can work as a stub object if owner is false.
@@ -59,6 +61,7 @@ public:
   ConstTmpRefObj ref() const { ConstTmpRefObj obj(this); return obj; }
 
   template <typename T> T& cast_to() {
+    std::cout << "called cast_to()"<< std::endl;
     assert(is_compatible<T>());
     return *reinterpret_cast<T*>(data());
   }
@@ -114,6 +117,10 @@ public:
   template <typename T>
   bool is_compatible() const {
     static_assert(std::is_trivially_copyable_v<T>);
+    std::cout << "is_compatible() -> " << 
+    " | data_ != nullptr : " << (data_ != nullptr) <<
+    " | size_ == sizeof(T) : " << (size_ == sizeof(T)) <<
+    " | align_ == std::align_val_t(alignof(T)) : " << (align_ == std::align_val_t(alignof(T))) << std::endl;
     return data_ != nullptr && size_ == sizeof(T) && align_ == std::align_val_t(alignof(T));
   }
 

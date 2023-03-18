@@ -105,7 +105,7 @@ void ecall_worker_th(int thid, int gid) {
     // Execute transaction while quit == false
     if (thid == 0) trans.epoch_timer_start = rdtscp();
     while (!loadAcquire(quit)) {
-        workload.run(trans);
+        workload.run<TxExecutor,TransactionStatus>(trans);
     }
 #endif
     // terminate logger

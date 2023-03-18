@@ -77,7 +77,7 @@ void ecall_initDB() {
         Table.put(i,tmp,0);
     }
 #elif INDEX_PATTERN == 1
-    YcsbWorkload::makeDB();
+    YcsbWorkload::makeDB<Tuple,void>(nullptr);
 #else
     // Masstree
 #endif

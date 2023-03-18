@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <sstream>
 
 #include "atomic_tool.h"
 #include "procedure.h"
@@ -53,6 +54,48 @@ void parse_bigendian(const char *in, Int &out) {
   Int tmp;
   ::memcpy(&tmp, in, sizeof(tmp));
   out = byteswap(tmp);
+}
+
+template<typename T>
+std::string_view struct_str_view(const T &t) {
+  return std::string_view(reinterpret_cast<const char *>(&t), sizeof(t));
+}
+
+/**
+ * Better strncpy().
+ * out buffer will be null-terminated.
+ * returned value is written size excluding the last null character.
+ */
+inline std::size_t copy_cstr(char *out, const char *in, std::size_t out_buf_size) {
+  if (out_buf_size == 0) return 0;
+  std::size_t i = 0;
+  while (i < out_buf_size - 1) {
+    if (in[i] == '\0') break;
+    out[i] = in[i];
+    i++;
+  }
+  out[i] = '\0';
+  return i;
+}
+
+
+/**
+ * for debug.
+ */
+inline std::string str_view_hex(std::string_view sv) {
+  std::stringstream ss;
+  char buf[3];
+  for (auto &&i : sv) {
+    ::snprintf(buf, sizeof(buf), "%02x", i);
+    ss << buf;
+  }
+  return ss.str();
+}
+
+
+template<typename T>
+inline std::string_view str_view(const T &t) {
+  return std::string_view(reinterpret_cast<const char *>(&t), sizeof(t));
 }
 
 extern bool chkEpochLoaded();
