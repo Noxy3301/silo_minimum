@@ -12,13 +12,13 @@ inline uint32_t get_tx_type(TxType t) {
   return static_cast<std::uint32_t>(t);
 }
 
-GLOBAL std::map<uint32_t,std::string> TxTypes;
-inline std::string get_tx_name(uint32_t t) {
-  return TxTypes.at(t);
-}
-inline void set_tx_name(TxType t, std::string name) {
-  TxTypes.emplace(get_tx_type(t), name);
-}
+// GLOBAL std::map<uint32_t,std::string> TxTypes;
+// inline std::string get_tx_name(uint32_t t) {
+//   return TxTypes.at(t);
+// }
+// inline void set_tx_name(TxType t, std::string name) {
+//   TxTypes.emplace(get_tx_type(t), name);
+// }
 
 template<size_t N>
 struct SimpleKey {
@@ -43,5 +43,5 @@ struct SimpleKey {
   }
 };
 
-#define MAX_TABLES 10
-alignas(CACHE_LINE_SIZE) GLOBAL MasstreeWrapper<Tuple> Masstrees[MAX_TABLES];
+// #define MAX_TABLES 10
+// alignas(CACHE_LINE_SIZE) GLOBAL MasstreeWrapper<Tuple> Masstrees[MAX_TABLES];

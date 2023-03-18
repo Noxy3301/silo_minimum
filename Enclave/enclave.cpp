@@ -25,11 +25,14 @@ using std::endl;
 
 #include "OCH.cpp"
 // #include "include/tpcc.h"
+#include "include/ycsb.h"
 
-#if INDEX_PATTERN == 2
+#if INDEX_PATTERN == 0
 OptCuckoo<Tuple*> Table(TUPLE_NUM*2);
+#elif INDEX_PATTERN == 1
+std::vector<KeyValue> Table(TUPLE_NUM);
 #else
-std::vector<Tuple> Table(TUPLE_NUM);
+// Masstree Table
 #endif
 std::vector<uint64_t> ThLocalEpoch(THREAD_NUM);
 std::vector<uint64_t> CTIDW(THREAD_NUM);
@@ -62,7 +65,6 @@ void ecall_waitForReady() {
     }
 }
 
-
 void ecall_sendStart() {
     __atomic_store_n(&start, true, __ATOMIC_RELEASE);
 }
@@ -80,12 +82,8 @@ unsigned get_rand() {
 void ecall_worker_th(int thid, int gid) {
     Result &myres = std::ref(results[thid]);
     TxExecutor trans(thid, (Result *) &myres, std::ref(quit));
-    uint64_t epoch_timer_start, epoch_timer_stop;
-    unsigned init_seed;
-    init_seed = get_rand();
-    // sgx_read_rand((unsigned char *) &init_seed, 4);
-    Xoroshiro128Plus rnd(init_seed);
 
+    // assign logger thread
     Logger *logger;
     std::atomic<Logger*> *logp = &(logs[gid]);  // loggerのthreadIDを指定したいからgidを使う
     for (;;) {
@@ -95,57 +93,24 @@ void ecall_worker_th(int thid, int gid) {
     }
     logger->add_tx_executor(trans);
 
-    __atomic_store_n(&readys[thid], 1, __ATOMIC_RELEASE);
-
-    while (true) {
-        if (__atomic_load_n(&start, __ATOMIC_ACQUIRE)) break;
-    }
-
 #if BENCHMARK == 0  // TPC-C-NP benchmark
     TPCCWorkload<Tuple,void> workload;
-
 #elif BENCHMARK == 1    // YCSB benchmark
-    if (thid == 0) epoch_timer_start = rdtscp();
+    YcsbWorkload workload;
 
-    while (true) {
-        if (__atomic_load_n(&quit, __ATOMIC_ACQUIRE)) break;
-        
-        makeProcedure(trans.pro_set_, rnd); // ocallで生成したprocedureをTxExecutorに移し替える
+    // Wait for other thread's ready
+    storeRelease(readys[thid], 1);
+    while (!loadAcquire(start)) continue;
 
-    RETRY:
-        // leaderWork
-        if (thid == 0) leaderWork(epoch_timer_start, epoch_timer_stop);
-        trans.durableEpochWork(epoch_timer_start, epoch_timer_stop, quit);
-
-        if (__atomic_load_n(&quit, __ATOMIC_ACQUIRE)) break;
-
-        trans.begin();
-        for (auto itr = trans.pro_set_.begin(); itr != trans.pro_set_.end(); itr++) {
-            if ((*itr).ope_ == Ope::READ) {
-                trans.read((*itr).key_);
-            } else if ((*itr).ope_ == Ope::WRITE) {
-                trans.write((*itr).key_);
-            } else {
-                // ERR;
-                // DEBUG
-                printf("おい！なんか変だぞ！\n");
-                return;
-            }
-        }
-   
-        if (trans.validationPhase()) {
-            trans.writePhase();
-            storeRelease(myres.local_commit_counts_, loadAcquire(myres.local_commit_counts_) + 1);
-        } else {
-            trans.abort();
-            myres.local_abort_counts_++;
-            goto RETRY;
-        }
+    // Execute transaction while quit == false
+    if (thid == 0) trans.epoch_timer_start = rdtscp();
+    while (!loadAcquire(quit)) {
+        workload.run(trans);
     }
 #endif
+    // terminate logger
     trans.log_buffer_pool_.terminate();
     logger->worker_end(thid);
-
     return;
 }
 

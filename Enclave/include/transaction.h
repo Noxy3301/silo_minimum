@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string_view>
 
 #include "silo_op_element.h"
 #include "procedure.h"
@@ -8,6 +9,9 @@
 #include "notifier.h"
 
 #include "../../Include/result.h"
+#include "status.hh"
+#include "workload.hh"
+#include "tuple.h"
 
 enum class TransactionStatus : uint8_t {
     invalid,
@@ -19,8 +23,8 @@ enum class TransactionStatus : uint8_t {
 class TxExecutor {
     public:
         // operation sets
-        std::vector<ReadElement> read_set_;
-        std::vector<WriteElement> write_set_;
+        std::vector<ReadElement<Tuple>> read_set_;
+        std::vector<WriteElement<Tuple>> write_set_;
         std::vector<Procedure> pro_set_;
         
         // for logging
@@ -31,16 +35,12 @@ class TxExecutor {
         TransactionStatus status_;
         unsigned int thid_;
         Result *result_;
-        // uint64_t epoch_timer_start, epoch_timer_stop;
+        uint64_t epoch_timer_start, epoch_timer_stop;
         const bool& quit_; // for thread termination control
         
         // for calcurate TID
         Tidword mrctid_;
         Tidword max_rset_, max_wset_;
-
-        
-        uint64_t write_val_;
-        uint64_t return_val_;
 
         // for logging
         LogBufferPool log_buffer_pool_;
@@ -66,15 +66,19 @@ class TxExecutor {
         }
 
         void begin();
-        void read(uint64_t key);
-        void write(uint64_t key, uint64_t val = 0);
-        ReadElement *searchReadSet(uint64_t key);
-        WriteElement *searchWriteSet(uint64_t key);
+
+        Status read(Storage s, std::string_view key, TupleBody** body);
+        Status read_internal(Storage s, std::string_view key, Tuple* tuple);
+        Status write(Storage s, std::string_view key, TupleBody&& body);
+
+        ReadElement<Tuple> *searchReadSet(Storage s, std::string_view key);
+        WriteElement<Tuple> *searchWriteSet(Storage s, std::string_view key);
+
         void unlockWriteSet();
-        void unlockWriteSet(std::vector<WriteElement>::iterator end);
+        void unlockWriteSet(std::vector<WriteElement<Tuple>>::iterator end);
         void lockWriteSet();
+
         bool validationPhase();
-        // TODO void wal(std::uint64_t ctid);
         void writePhase();
         void abort();
     
@@ -82,4 +86,8 @@ class TxExecutor {
         bool pauseCondition();
         void epochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop);
         void durableEpochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop, const bool &quit);
+
+        bool commit();
+        bool isLeader();
+        void leaderWork();
 };

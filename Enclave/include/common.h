@@ -3,17 +3,17 @@
 #include <cstdint>
 #include <vector>
 
-#include "tuple.h"
+// #include "tuple.h"
 
 #include "../../Include/consts.h"
 #include "../../Include/result.h"
 #include "../OCH.cpp"
 
-#if INDEX_PATTERN == 2
-extern OptCuckoo<Tuple*> Table;
-#else
-extern std::vector<Tuple> Table;
-#endif
+// #if INDEX_PATTERN == 2
+// extern OptCuckoo<Tuple*> Table;
+// #else
+// extern std::vector<Tuple> Table;
+// #endif
 extern std::vector<uint64_t> ThLocalEpoch;
 extern std::vector<uint64_t> CTIDW;
 extern std::vector<uint64_t> ThLocalDurableEpoch;

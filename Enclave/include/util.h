@@ -26,7 +26,36 @@ inline static void waitTime_ns(const uint64_t time) {
     }
 }
 
+template<typename Int>
+Int byteswap(Int in) {
+  switch (sizeof(Int)) {
+    case 1:
+      return in;
+    case 2:
+      return __builtin_bswap16(in);
+    case 4:
+      return __builtin_bswap32(in);
+    case 8:
+      return __builtin_bswap64(in);
+    default:
+      assert(false);
+  }
+}
+
+template<typename Int>
+void assign_as_bigendian(Int value, char *out) {
+  Int tmp = byteswap(value);
+  ::memcpy(out, &tmp, sizeof(tmp));
+}
+
+template<typename Int>
+void parse_bigendian(const char *in, Int &out) {
+  Int tmp;
+  ::memcpy(&tmp, in, sizeof(tmp));
+  out = byteswap(tmp);
+}
+
 extern bool chkEpochLoaded();
-extern void leaderWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop);
+extern void siloLeaderWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop);
 extern void ecall_initDB();
 extern void makeProcedure(std::vector<Procedure> &pro, Xoroshiro128Plus &rnd);

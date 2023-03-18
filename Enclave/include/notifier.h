@@ -8,6 +8,7 @@
 
 #include "common.h"
 #include "tsc.h"    // start_clock_記録するように使ってる
+#include "tuple.h"
 
 class NotificationId {
     public:
