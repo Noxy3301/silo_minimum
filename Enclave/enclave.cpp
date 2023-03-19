@@ -23,7 +23,7 @@ using std::endl;
 #include "include/util.h"
 #include "include/zipf.h"
 
-#include "OCH.cpp"
+#include "OCH.h"
 // #include "include/tpcc.h"
 #include "include/ycsb.h"
 
