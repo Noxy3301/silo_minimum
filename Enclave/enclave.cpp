@@ -94,9 +94,10 @@ void ecall_worker_th(int thid, int gid) {
     logger->add_tx_executor(trans);
 
 #if BENCHMARK == 0  // TPC-C-NP benchmark
-    TPCCWorkload<Tuple,void> workload;
+    TPCCWorkload workload;
 #elif BENCHMARK == 1    // YCSB benchmark
     YcsbWorkload workload;
+#endif
 
     // Wait for other thread's ready
     storeRelease(readys[thid], 1);
@@ -107,7 +108,6 @@ void ecall_worker_th(int thid, int gid) {
     while (!loadAcquire(quit)) {
         workload.run<TxExecutor,TransactionStatus>(trans);
     }
-#endif
     // terminate logger
     trans.log_buffer_pool_.terminate();
     logger->worker_end(thid);

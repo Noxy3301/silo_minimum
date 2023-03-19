@@ -39,47 +39,11 @@ void FisherYates(std::vector<int>& v){
 }
 
 void ecall_initDB() {
-//     std::vector<int> random_array;
-//     for (int i = 0; i < TUPLE_NUM; i++) {
-//         random_array.push_back(i);
-//     }
-//     if (INDEX_PATTERN == 1) {
-//         FisherYates(random_array);
-//     }
-    
-//     // init Table
-//     for (int i = 0; i < TUPLE_NUM; i++) {
-// #if INDEX_PATTERN == 2
-//         Tuple *tmp=new Tuple();
-// #else
-//         Tuple *tmp;
-//         tmp = &Table[i];
-// #endif
-//         tmp->tidword_.epoch = 1;
-//         tmp->tidword_.latest = 1;
-//         tmp->tidword_.lock = 0;
-//         tmp->key_ = random_array[i];
-//         tmp->val_ = 0;
-// #if INDEX_PATTERN == 2
-//         Table.put(i,tmp,0);
-// #endif
-//     }
 
-#if INDEX_PATTERN == 0
-    for (int i = 0; i < TUPLE_NUM; i++) {
-        Tuple *tmp;
-        tmp = &Table[i];
-        tmp->tidword_.epoch = 1;
-        tmp->tidword_.latest = 1;
-        tmp->tidword_.lock = 0;
-        tmp->key_ = i;
-        tmp->val_ = 0;
-        Table.put(i,tmp,0);
-    }
-#elif INDEX_PATTERN == 1
+#if BENCHMARK == 0
+    TPCCWorkload<Tuple,void>::makeDB(nullptr);
+#elif BENCHMARK == 1
     YcsbWorkload::makeDB<Tuple,void>(nullptr);
-#else
-    // Masstree
 #endif
 
     for (int i = 0; i < THREAD_NUM; i++) {
