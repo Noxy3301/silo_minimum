@@ -146,12 +146,12 @@ RETRY:
 
         tx.begin();
         SimpleKey<8> key[tx.pro_set_.size()];
-        HeapObject obj[tx.pro_set_.size()];
+        // HeapObject obj[tx.pro_set_.size()];
         uint64_t i = 0;
         for (auto &pro : tx.pro_set_) {
             YCSB::CreateKey(pro.key_, key[i].ptr());
-            uint64_t k;
-            parse_bigendian(key[i].view().data(), k);
+            // uint64_t k;
+            // parse_bigendian(key[i].view().data(), k);
             if (pro.ope_ == Ope::READ) {
                 // TupleBody* body;
                 tx.read(Storage::YCSB, key[i].view());
