@@ -25,23 +25,32 @@ struct Tidword {
 
 class Tuple {
 public:
-    alignas(CACHE_LINE_SIZE) Tidword tidword_;
-    TupleBody body_;
+    alignas(CACHE_LINE_SIZE) 
+    Tidword tidword_;
+    std::string key_;
+    int value_;
 
-    Tuple() {}
+    Tuple(std::string key, int value) : key_(key), value_(value) {}
 
-    void init([[maybe_unused]] size_t thid, TupleBody&& body, [[maybe_unused]] void* p) {
-        // for initializer
+    void init() {
         tidword_.epoch = 1;
         tidword_.latest = true;
         tidword_.absent = false;
         tidword_.lock = false;
-        body_ = std::move(body);
     }
 
-    void init(TupleBody&& body) {
-        tidword_.absent = true;
-        tidword_.lock = true;
-        body_ = std::move(body);
-    }
+    // void init([[maybe_unused]] size_t thid, TupleBody&& body, [[maybe_unused]] void* p) {
+    //     // for initializer
+    //     tidword_.epoch = 1;
+    //     tidword_.latest = true;
+    //     tidword_.absent = false;
+    //     tidword_.lock = false;
+    //     body_ = std::move(body);
+    // }
+
+    // void init(TupleBody&& body) {
+    //     tidword_.absent = true;
+    //     tidword_.lock = true;
+    //     body_ = std::move(body);
+    // }
 };

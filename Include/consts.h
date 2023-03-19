@@ -1,15 +1,15 @@
 #pragma once
 
 // common settings
-#define THREAD_NUM 1        // Number of worker thread
-#define LOGGER_NUM 1        // Number of logger thread
+#define THREAD_NUM 9        // Number of worker thread
+#define LOGGER_NUM 3        // Number of logger thread
 #define EPOCH_TIME 40       // Epoch interval[msec]
 #define CLOCKS_PER_US 2900  // CPU_MHz (Use this info for measuring time)
 #define EXTIME 3            // Execution time[sec]
 #define CACHE_LINE_SIZE 64  // CPU cache line size
 
 // YCSB settings
-#define TUPLE_NUM 10   // Total number of records
+#define TUPLE_NUM 1000000   // Total number of records
 #define MAX_OPE 10          // Total number of operations per single transaction
 #define RRAITO 50           // read ratio of single transaction
 #define ZIPF_SKEW 0         // zipf skew (0 ~ 0.999...)

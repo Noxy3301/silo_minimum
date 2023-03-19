@@ -28,8 +28,8 @@ struct SimpleKey {
 
   const char *ptr() const { return &data[0]; }
 
-  [[nodiscard]] std::string_view view() const {
-    return std::string_view(&data[0], N);
+  [[nodiscard]] std::string view() const {
+    return std::string(&data[0], N);
   }
 
   int compare(const SimpleKey& rhs) const {

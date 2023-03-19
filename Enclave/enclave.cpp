@@ -30,7 +30,7 @@ using std::endl;
 #if INDEX_PATTERN == 0
 OptCuckoo<Tuple*> Table(TUPLE_NUM*2);
 #elif INDEX_PATTERN == 1
-std::vector<KeyValue> Table(TUPLE_NUM);
+LinearIndex<Tuple*> Table;
 #else
 // Masstree Table
 #endif

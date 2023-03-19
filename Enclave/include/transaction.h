@@ -67,12 +67,12 @@ class TxExecutor {
 
         void begin();
 
-        Status read(Storage s, std::string_view key, TupleBody** body);
-        Status read_internal(Storage s, std::string_view key, Tuple* tuple);
-        Status write(Storage s, std::string_view key, TupleBody&& body);
+        Status read(Storage s, std::string key);
+        Status read_internal(Storage s, std::string key, Tuple* tuple);
+        Status write(Storage s, std::string key);
 
-        ReadElement<Tuple> *searchReadSet(Storage s, std::string_view key);
-        WriteElement<Tuple> *searchWriteSet(Storage s, std::string_view key);
+        ReadElement<Tuple> *searchReadSet(Storage s, std::string key);
+        WriteElement<Tuple> *searchWriteSet(Storage s, std::string key);
 
         void unlockWriteSet();
         void unlockWriteSet(std::vector<WriteElement<Tuple>>::iterator end);

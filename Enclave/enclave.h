@@ -17,19 +17,44 @@ extern uint64_t ecall_getResult(int thid, int datatype);
 
 extern uint64_t ecall_showDurableEpoch();
 
-class KeyValue {
+template <class T>
+class LinearIndex {
 public:
-    std::string_view key_;
-    Tuple *value_;
+    std::vector<Tuple*> table_;
+    int table_size_;
 
-    KeyValue() {}   // 空のコンストラクタがないと動かない？
-    KeyValue(std::string_view key, Tuple *value) : key_(key), value_(value) {};
+    LinearIndex() {}
+
+    void insert_value(T value) {
+        table_.emplace_back(value);
+    }
+
+    T get(std::string key) {
+        for (int i = 0; i < table_.size(); i++) {
+            // print_String2Hex(table_[i]->key_, false);
+            // cout << " ";
+            // print_String2Hex(key);
+            // cout << "|" << print_hexString(table_[i]->key_) << "|" << print_hexString(key)  << "|" << endl;
+            if (table_[i]->key_ == key) {   // std::cout << "aru" << std::endl;
+                return table_[i];
+            }
+        } // std::cout << "nai" << std::endl;
+        return nullptr;
+    }
+
+    // void print_String2Hex(std::string str, bool isFlush = true) {
+    //     // debug用、keyを8x8に戻す
+    //     for (int i = 0; i < 8; i++) {
+    //         std::cout << int(uint8_t(str[i])) << ",";
+    //     }
+    //     if (isFlush) std::cout << std::endl;
+    // }
 };
 
 #if INDEX_PATTERN == 0
 extern OptCuckoo<Tuple*> Table;
 #elif INDEX_PATTERN == 1
-extern std::vector<KeyValue> Table;
+extern LinearIndex<Tuple*> Table;
 #else
 // Masstree Table
 #endif

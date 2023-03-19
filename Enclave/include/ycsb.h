@@ -153,15 +153,15 @@ RETRY:
             uint64_t k;
             parse_bigendian(key[i].view().data(), k);
             if (pro.ope_ == Ope::READ) {
-                TupleBody* body;
-                tx.read(Storage::YCSB, key[i].view(), &body);
-                if (tx.status_ != TransactionStatus::aborted) {
-                  YCSB& t = body->get_value().cast_to<YCSB>();
-                }
+                // TupleBody* body;
+                tx.read(Storage::YCSB, key[i].view());
+                // if (tx.status_ != TransactionStatus::aborted) {
+                //   YCSB& t = body->get_value().cast_to<YCSB>();
+                // }
             } else if (pro.ope_ == Ope::WRITE) {
-                obj[i].template allocate<YCSB>();
-                YCSB& t = obj[i].ref();
-                tx.write(Storage::YCSB, key[i].view(), TupleBody(key[i].view(), std::move(obj[i])));
+                // obj[i].template allocate<YCSB>();
+                // YCSB& t = obj[i].ref();
+                tx.write(Storage::YCSB, key[i].view());
             } else if (pro.ope_ == Ope::READ_MODIFY_WRITE) {
                 // TupleBody* body;
                 // tx.read(Storage::YCSB, key[i].view(), &body);
@@ -202,13 +202,13 @@ RETRY:
       for (auto i = start; i <= end; ++i) {
         SimpleKey<8> key;
         YCSB::CreateKey(i, key.ptr());
-        HeapObject obj;
-        obj.allocate<YCSB>();
-        YCSB& ycsb_tuple = obj.ref();
-        ycsb_tuple.id_ = i;
-        Tuple* tmp = new Tuple();
-        tmp->init(thid, TupleBody(key.view(), std::move(obj)), p);
-        Table.emplace_back(key.view(), tmp);
+        // HeapObject obj;
+        // obj.allocate<YCSB>();
+        // YCSB& ycsb_tuple = obj.ref();
+        // ycsb_tuple.id_ = i;
+        Tuple* tmp = new Tuple(key.view(), 0);
+        tmp->init();
+        Table.insert_value(tmp);
         // Masstrees[get_storage(Storage::YCSB)].insert_value(key.view(), tmp);
       }
     }
@@ -228,7 +228,6 @@ RETRY:
                         i * (TUPLE_NUM / maxthread),
                         (i + 1) * (TUPLE_NUM / maxthread) - 1);
       for (auto &th : thv) th.join();
-      std::cout << "end" << std::endl;
     }
 
     // static void displayWorkloadParameter() {

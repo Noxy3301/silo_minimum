@@ -9,17 +9,6 @@
 #include "include/util.h"
 #include "enclave.h"
 
-Tuple *linearIndex_get(std::string_view key) {
-    Tuple *tuple;
-    for (auto itr = Table.begin(); itr != Table.end(); itr++) {
-        // tuple = (*itr)->body_.val_.get_value(key);
-        if ((*itr).key_ == key) {
-            return (*itr).value_;
-        }
-    }
-    return nullptr;
-}
-
 void TxExecutor::begin() {
     status_ = TransactionStatus::inFlight;
     max_wset_.obj_ = 0;
@@ -29,7 +18,7 @@ void TxExecutor::begin() {
 
 // こっちのreadはindexからKeyをつかって対応するbodyを持ってきている
 // readしたbodyの一貫性はread_internalで確認している
-Status TxExecutor::read(Storage s, std::string_view key, TupleBody** body) {
+Status TxExecutor::read(Storage s, std::string key) {
     // these variable cause error (-fpermissive)
     // "crosses initialization of ..."
     // So it locate before first goto instruction.
@@ -41,18 +30,16 @@ Status TxExecutor::read(Storage s, std::string_view key, TupleBody** body) {
     // read-own-writes or re-read from local read set
     re = searchReadSet(s, key);
     if (re) {
-        *body = &(re->body_);
         goto FINISH_READ;
     }
     we = searchWriteSet(s, key);
     if (we) {
-        *body = &(we->body_);
         goto FINISH_READ;
     }
 
     // Search tuple from data structure
     Tuple *tuple;
-    tuple = linearIndex_get(key);
+    tuple = Table.get(key);
     // tuple = Masstrees[get_storage(s)].get_value(key);   // TODO: ここをOCHに変える
     if (tuple == nullptr) return Status::WARN_NOT_FOUND;
 
@@ -60,16 +47,16 @@ Status TxExecutor::read(Storage s, std::string_view key, TupleBody** body) {
     if (stat != Status::OK) {
         return stat;
     }
-    *body = &(read_set_.back().body_);
 
 FINISH_READ:
     return Status::OK;
 }
 
 // read_internalはbodyの一貫性はread_internalで確認している
-Status TxExecutor::read_internal(Storage s, std::string_view key, Tuple* tuple) {
-    TupleBody body;
+Status TxExecutor::read_internal(Storage s, std::string key, Tuple* tuple) {
+    // TupleBody body;
     Tidword expected, check;
+    int val;
 
     //(a) reads the TID word, spinning until the lock is clear
 
@@ -90,7 +77,8 @@ Status TxExecutor::read_internal(Storage s, std::string_view key, Tuple* tuple) 
         }
 
         //(c) reads the data
-        body = TupleBody(key, tuple->body_.get_val(), tuple->body_.get_val_align());
+        // body = TupleBody(key, tuple->body_.get_val(), tuple->body_.get_val_align());
+        val = tuple->value_;
 
         //(d) performs a memory fence
         // don't need.
@@ -101,7 +89,7 @@ Status TxExecutor::read_internal(Storage s, std::string_view key, Tuple* tuple) 
         if (expected == check) break;
         expected = check;
     }
-    read_set_.emplace_back(s, key, tuple, std::move(body), expected);
+    read_set_.emplace_back(s, key, tuple, val, expected);
 
     return Status::OK;
 }
@@ -152,7 +140,7 @@ Status TxExecutor::read_internal(Storage s, std::string_view key, Tuple* tuple) 
 //     return;
 // }
 
-Status TxExecutor::write(Storage s, std::string_view key, TupleBody&& body) {
+Status TxExecutor::write(Storage s, std::string key) {
     if (searchWriteSet(s, key)) goto FINISH_WRITE;
 
     // Search tuple from data structure
@@ -162,12 +150,12 @@ Status TxExecutor::write(Storage s, std::string_view key, TupleBody&& body) {
     if (re) {
         tuple = re->rcdptr_;
     } else {
-        tuple = linearIndex_get(key);
+        tuple = Table.get(key);
         // tuple = Masstrees[get_storage(s)].get_value(key);   // TODO: OCHに変える
         if (tuple == nullptr) return Status::WARN_NOT_FOUND;
     }
 
-    write_set_.emplace_back(s, key, tuple, std::move(body), OpType::UPDATE);
+    write_set_.emplace_back(s, key, tuple, tuple->value_, OpType::UPDATE); // TODO: valの扱い
 
 FINISH_WRITE:
     return Status::OK;
@@ -201,7 +189,7 @@ FINISH_WRITE:
 //     return;
 // }
 
-ReadElement<Tuple> *TxExecutor::searchReadSet(Storage s, std::string_view key) {
+ReadElement<Tuple> *TxExecutor::searchReadSet(Storage s, std::string key) {
     for (auto &re : read_set_) {
         if (re.storage_ != s) continue;
         if (re.key_ == key) return &re;
@@ -210,7 +198,7 @@ ReadElement<Tuple> *TxExecutor::searchReadSet(Storage s, std::string_view key) {
     return nullptr;
 }
 
-WriteElement<Tuple> *TxExecutor::searchWriteSet(Storage s, std::string_view key) {
+WriteElement<Tuple> *TxExecutor::searchWriteSet(Storage s, std::string key) {
     for (auto &we : write_set_) {
         if (we.storage_ != s) continue;
         if (we.key_ == key) return &we;
@@ -452,7 +440,9 @@ void TxExecutor::writePhase() {
         // update and unlock
         switch ((*itr).op_) {
             case OpType::UPDATE: {
-                memcpy((*itr).rcdptr_->body_.get_val_ptr(), (*itr).body_.get_val_ptr(), (*itr).body_.get_val_size());
+
+                // memcpy((*itr).rcdptr_->body_.get_val_ptr(), (*itr).body_.get_val_ptr(), (*itr).body_.get_val_size());
+                // std::cout << (*itr).rcdptr_->tidword_.tid << " " << maxtid.tid << std::endl;
                 storeRelease((*itr).rcdptr_->tidword_.obj_, maxtid.obj_);
                 break;
             }
