@@ -15,6 +15,7 @@ file(GLOB SILO_SOURCES
     "App/util.cpp"
     "App/logger_affinity.cpp"
     "App/main.cpp"
+    "Enclave/common/hash.cpp"
     "Enclave/*.cpp"
 )
 

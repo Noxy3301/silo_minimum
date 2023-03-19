@@ -51,7 +51,6 @@ public:
     }
 };
 
-// key:int->val:T
 template <class T>
 class OptCuckoo
 {
