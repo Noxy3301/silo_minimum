@@ -34,7 +34,7 @@
 // 0: OCH       - Using Optimistic Cuckoo Hashing as index. wip
 // 1: linear    - No index, need to linear scan to search item.
 // 2: Masstree  - Using Masstree as index. wip
-#define INDEX_PATTERN 1
+#define INDEX_PATTERN 0
 
 // Benchmark pattern
 // 0: Use TPC-C-NP benchmark

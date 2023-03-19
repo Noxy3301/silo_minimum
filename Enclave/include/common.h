@@ -7,7 +7,7 @@
 
 #include "../../Include/consts.h"
 #include "../../Include/result.h"
-#include "../OCH.cpp"
+#include "../OCH.h"
 
 // #if INDEX_PATTERN == 2
 // extern OptCuckoo<Tuple*> Table;
