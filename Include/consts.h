@@ -24,19 +24,19 @@
 #define PAGE_SIZE 4096
 
 // show result details flag
-#define SHOW_DETAILS 0
+#define SHOW_DETAILS 1
 #define ADD_ANALYSIS 1
 
 // no wait optimization
 #define NO_WAIT_LOCKING_IN_VALIDATION 1
 
 // Index pattern
-// 0: OCH       - Using Optimistic Cuckoo Hashing as index. wip
+// 0: OCH       - Using Optimistic Cuckoo Hashing as index.
 // 1: linear    - No index, need to linear scan to search item.
 // 2: Masstree  - Using Masstree as index. wip
 #define INDEX_PATTERN 0
 
 // Benchmark pattern
-// 0: Use TPC-C-NP benchmark
-// 1: Use YCSB benchmark
+// 0: Use TPC-C-NP benchmark. wip
+// 1: Use YCSB benchmark.
 #define BENCHMARK 1

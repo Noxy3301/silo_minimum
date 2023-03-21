@@ -24,7 +24,13 @@ class Result {
         void displayCommitCounts();
         void displayAllResult();
 
+        void displayLocalDetailResult(const int thid);
+        void displayDetailResult();
+
         void addLocalAbortCounts(const uint64_t count);
         void addLocalCommitCounts(const uint64_t count);
+
+        void addLocalAbortDetailCounts(const Result &other);
+
         void addLocalAllResult(const Result &other);
 };

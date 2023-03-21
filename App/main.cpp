@@ -14,9 +14,8 @@ using namespace std;
 
 #include "include/logger_affinity.h"
 #include "include/util.h"
-#include "../Include/result.h"
 
-std::vector <Result> SiloResult(THREAD_NUM);
+std::vector<Result> SiloResult(THREAD_NUM);
 
 void worker_th(int thid, int gid) {
     ecall_worker_th(thid, gid);  // thread.emplace_backで直接渡せる気がしないし、こっちで受け取ってResultの下処理をしたい
@@ -83,12 +82,17 @@ int main() {
     double duration4 = static_cast<double>(chrono::duration_cast<chrono::microseconds>(p5 - p4).count() / 1000.0);
 
     uint64_t ret_durableEpoch = ecall_showDurableEpoch();
-    // displayResult();
 
     for (int i = 0; i < THREAD_NUM; i++) {
         SiloResult[0].addLocalAllResult(SiloResult[i]);
+#if SHOW_DETAILS
+        SiloResult[i].displayLocalDetailResult(i);
+#endif
     }
+#if SHOW_DETAILS
     SiloResult[0].displayAllResult();
+    SiloResult[0].displayDetailResult();
+#endif
 
     // std::cout << "[info]\tmakeDB:\t" << duration1/1000 << "s.\n";
     // std::cout << "[info]\tcreateThread:\t" << duration2/1000 << "s.\n";

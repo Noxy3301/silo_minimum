@@ -314,7 +314,10 @@ bool TxExecutor::validationPhase() { // Validation Phase
     sort(write_set_.begin(), write_set_.end());
     lockWriteSet();
 #if NO_WAIT_LOCKING_IN_VALIDATION
-    if (this->status_ == TransactionStatus::aborted) return false;
+    if (this->status_ == TransactionStatus::aborted) {
+        result_->local_abort_by_validation1_++;
+        return false;
+    }
 #endif
 
     asm volatile("":: : "memory");
@@ -332,6 +335,7 @@ bool TxExecutor::validationPhase() { // Validation Phase
         check.obj_ = loadAcquire((*itr).rcdptr_->tidword_.obj_);
         if ((*itr).get_tidword().epoch != check.epoch || (*itr).get_tidword().tid != check.tid) {
             this->status_ = TransactionStatus::aborted;
+            result_->local_abort_by_validation2_++;
             unlockWriteSet();
             return false;
         }
@@ -341,10 +345,17 @@ bool TxExecutor::validationPhase() { // Validation Phase
         // 3 the tuple is locked and it isn't included by its write set.
         if (check.lock && !searchWriteSet((*itr).storage_, (*itr).key_)) {
             this->status_ = TransactionStatus::aborted;
+            result_->local_abort_by_validation3_++;
             unlockWriteSet();
             return false;
         }
         max_rset_ = std::max(max_rset_, check);
+    }
+
+    // loggingができる(current_bufferがあるか確認する)
+    if (log_buffer_pool_.current_buffer_==NULL) {
+        this->result_->local_abort_by_null_buffer_++;
+        return false;
     }
 
     // goto Phase 3
