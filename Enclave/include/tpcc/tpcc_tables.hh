@@ -9,7 +9,7 @@
 // #include "cpu.h"
 // #include "tpcc_util.hpp"
 
-#include "../atomic_wrapper.hh"
+#include "../atomic_wrapper.h"
 #include "../workload.hh"
 #include "tpcc_util.hh"
 

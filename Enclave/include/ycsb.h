@@ -3,11 +3,11 @@
 #include <thread>
 #include <vector>
 
-#include "heap_object.hh"
+// #include "heap_object.hh"
 #include "procedure.h"
 #include "random.h"
 #include "../../Include/result.h"
-#include "tuple_body.hh"
+// #include "tuple_body.hh"
 #include "util.h"
 #include "workload.hh"
 #include "zipf.h"

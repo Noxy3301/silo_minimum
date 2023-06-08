@@ -24,7 +24,7 @@ using std::endl;
 #include "include/zipf.h"
 
 #include "OCH.h"
-// #include "include/tpcc.h"
+#include "include/tpcc.h"
 #include "include/ycsb.h"
 
 #if INDEX_PATTERN == 0
@@ -94,7 +94,8 @@ void ecall_worker_th(int thid, int gid) {
     logger->add_tx_executor(trans);
 
 #if BENCHMARK == 0  // TPC-C-NP benchmark
-    TPCCWorkload workload;
+    TPCCWorkload<Tuple, void> workload;
+    workload.prepare(trans, nullptr);
 #elif BENCHMARK == 1    // YCSB benchmark
     YcsbWorkload workload;
 #endif
@@ -147,7 +148,8 @@ uint64_t ecall_getResult(int thid, int datatype) {
         return results[thid].local_abort_by_null_buffer_;
 #endif
     default:
-        break;
+        printf("ERR! @ecall_getResult\n");
+        return 0;
     }
 }
 

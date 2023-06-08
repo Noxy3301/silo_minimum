@@ -89,6 +89,7 @@ int main() {
         SiloResult[i].displayLocalDetailResult(i);
 #endif
     }
+    
 #if SHOW_DETAILS
     SiloResult[0].displayAllResult();
     SiloResult[0].displayDetailResult();

@@ -27,7 +27,7 @@
 // #include "epoch.h"
 
 template <typename Tuple, typename Param>
-class TPCCInitializaer {
+class TPCCInitializer {
 public:
   static void db_insert_raw([[maybe_unused]] size_t thid, [[maybe_unused]] Param *param,
                     Storage st, std::string_view key, HeapObject&& val) {
