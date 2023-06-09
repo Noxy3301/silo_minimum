@@ -138,15 +138,15 @@ public:
 
 class Payment {
 public:
-    std::uint16_t w_id;
-    std::uint8_t d_id;
-    std::uint32_t c_id;
-    std::uint16_t d_w_id;
-    std::uint16_t c_w_id;
-    std::uint8_t c_d_id;
-    char c_last[LASTNAME_LEN + 1];
-    double h_amount;
-    bool by_last_name;
+    std::uint16_t w_id;     // warehouse ID -> 支払いが行われる倉庫
+    std::uint8_t d_id;      // district ID  -> 支払いが行われる地区
+    std::uint32_t c_id;     // customer ID  -> 顧客
+    std::uint16_t d_w_id;   // district warehouse ID    -> 地区が関連付けられている倉庫(普通はw_idと同じ)
+    std::uint16_t c_w_id;   // customer warehouse ID    -> 顧客が関連付けられている倉庫(顧客が支払いを行う倉庫)
+    std::uint8_t c_d_id;    // customer district ID     -> 顧客が支払いを行う地区
+    char c_last[LASTNAME_LEN + 1];  // customer last name
+    double h_amount;        // payment amount?
+    bool by_last_name;      // c_lastで検索するか、c_idで検索するかのフラグ、c_lastで検索するときは一致する姓が複数存在する可能性があるけどTPC-Cでは最新の顧客が選ばれるらしい
 
     void generate([[maybe_unused]] std::uint16_t w_id0, Option &opt) {
 #ifdef FIXED_WAREHOUSE_PER_THREAD
@@ -158,6 +158,7 @@ public:
         d_id = random_int(ID_START, opt.dist_per_ware);
         h_amount = random_double(100, 500000, 100);
 
+        // 85%の確率でhome warehouseでのPaymentが発行される、それ以外はremote案件
         size_t x = random_int(1, 100);
         if (x <= 85) {
             // home warehouse
@@ -165,7 +166,7 @@ public:
             c_w_id = w_id;
         } else {
             // remote warehouse
-            c_d_id = random_int(ID_START, opt.dist_per_ware);
+            c_d_id = random_int(ID_START, opt.dist_per_ware);   // CHECK: ここの挙動が理解できていない
             if (opt.num_wh > 1) {
                 do {
                     c_w_id = random_int(ID_START, opt.num_wh);
