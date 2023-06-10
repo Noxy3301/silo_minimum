@@ -2,6 +2,7 @@
 
 #include "include/util.h"
 #include "include/ycsb.h"
+#include "include/tpcc.h"
 
 bool chkEpochLoaded() {
     uint64_t nowepo = atomicLoadGE();

@@ -208,7 +208,7 @@ RETRY:
         // ycsb_tuple.id_ = i;
         Tuple* tmp = new Tuple(key.view(), 0);
         tmp->init();
-        Table.put(key.view(),tmp,1);
+        Table.put(key.view(), tmp, 1);
         // Masstrees[get_storage(Storage::YCSB)].insert_value(key.view(), tmp);
       }
     }
