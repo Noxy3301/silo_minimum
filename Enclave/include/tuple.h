@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "cache_line_size.h"
-// #include "tuple_body.hh"
+#include "tuple_body.hh"
 
 struct Tidword {
     union {
@@ -23,27 +23,14 @@ struct Tidword {
     bool operator < (const Tidword &right) const { return this->obj_ < right.obj_; }
 };
 
-// valueをvoid*型にして任意の型を格納できるようにしているので、どの型に変換するかを一緒に書いておく
-enum class ValueType : uint32_t {
-    integer,
-    string,
-    TPCC_item,
-};
-
-/**
- * @param key std::string
- * @param value void*
- * @param valueType ValueType::~
- */
 class Tuple {
 public:
     alignas(CACHE_LINE_SIZE) 
     Tidword tidword_;
     std::string key_;
-    void* value_;
-    ValueType valueType_;
+    int value_;
 
-    Tuple(std::string key, void* value, ValueType valueType) : key_(key), value_(value), valueType_(valueType) {}
+    Tuple(std::string key, int value) : key_(key), value_(value) {}
 
     void init() {
         tidword_.epoch = 1;

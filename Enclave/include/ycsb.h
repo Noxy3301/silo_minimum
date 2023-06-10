@@ -3,11 +3,11 @@
 #include <thread>
 #include <vector>
 
-// #include "heap_object.hh"
+#include "heap_object.hh"
 #include "procedure.h"
 #include "random.h"
 #include "../../Include/result.h"
-// #include "tuple_body.hh"
+#include "tuple_body.hh"
 #include "util.h"
 #include "workload.hh"
 #include "zipf.h"
@@ -208,7 +208,7 @@ RETRY:
         // ycsb_tuple.id_ = i;
         Tuple* tmp = new Tuple(key.view(), 0);
         tmp->init();
-        Table.put(key.view(), tmp, 1);
+        Table.put(key.view(),tmp,1);
         // Masstrees[get_storage(Storage::YCSB)].insert_value(key.view(), tmp);
       }
     }
