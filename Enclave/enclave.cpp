@@ -28,7 +28,8 @@ using std::endl;
 #include "include/ycsb.h"
 
 #if INDEX_PATTERN == 0
-OptCuckoo<Tuple*> Table(TUPLE_NUM*2);
+#define MAX_TABLES 10
+std::vector<OptCuckoo<Tuple*>> Table(MAX_TABLES);
 #elif INDEX_PATTERN == 1
 LinearIndex<Tuple*> Table;
 #else

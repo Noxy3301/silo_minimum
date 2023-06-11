@@ -3,25 +3,25 @@
 #include <thread>
 #include <vector>
 
+#include "../../Include/result.h"
 #include "heap_object.hh"
 #include "procedure.h"
 #include "random.h"
-#include "../../Include/result.h"
 #include "tuple_body.hh"
 #include "util.h"
 #include "workload.hh"
 #include "zipf.h"
 
-#include "transaction.h"
 #include "atomic_wrapper.h"
+#include "transaction.h"
 
 #include "../enclave.h"
 
 #include <iostream> // debug
 
 enum class Storage : std::uint32_t {
-  YCSB = 0,
-  Size,
+    YCSB = 0,
+    Size,
 };
 
 struct YCSB {
@@ -34,10 +34,13 @@ struct YCSB {
 
     void createKey(char *out) const { return CreateKey(id_, out); }
 
-    [[nodiscard]] std::string_view view() const { return struct_str_view(*this); }
+    [[nodiscard]] std::string_view view() const {
+        return struct_str_view(*this);
+    }
 };
 
-inline static void makeProcedure(std::vector<Procedure> &pro, Xoroshiro128Plus& rnd, FastZipf& zipf) {
+inline static void makeProcedure(std::vector<Procedure> &pro,
+                                 Xoroshiro128Plus &rnd, FastZipf &zipf) {
     pro.clear();
     for (int i = 0; i < MAX_OPE; i++) {
         uint64_t tmpkey = zipf() % TUPLE_NUM; // decide access destination key.
@@ -68,9 +71,9 @@ inline static void makeProcedure(std::vector<Procedure> &pro, Xoroshiro128Plus& 
 //         if (loadAcquire(tx.quit_)) return;
 
 //         tx.begin();
-//         SimpleKey<8> key[tx.pro_set_.size()];   // uint64_tを8Byteのchar型Keyとして扱う
-//         HeapObject obj[tx.pro_set_.size()];
-//         uint64_t i = 0; // Current Key indexに使う
+//         SimpleKey<8> key[tx.pro_set_.size()];   //
+//         uint64_tを8Byteのchar型Keyとして扱う HeapObject
+//         obj[tx.pro_set_.size()]; uint64_t i = 0; // Current Key indexに使う
 //         for (auto &pro : tx.pro_set_) {
 //             YCSB::CreateKey(pro.key_, key[i].ptr());
 //             uint64_t k;
@@ -85,7 +88,8 @@ inline static void makeProcedure(std::vector<Procedure> &pro, Xoroshiro128Plus& 
 //             } else if (pro.ope_ == Ope::WRITE) {
 //                 obj[i].template allocate<YCSB>();
 //                 YCSB& t = obj[i].ref();
-//                 tx.write(Storage::YCSB, key[i].view(), TupleBody(key[i].view(), std::move(obj[i])));
+//                 tx.write(Storage::YCSB, key[i].view(),
+//                 TupleBody(key[i].view(), std::move(obj[i])));
 //             } else {
 //                 printf("okasiizo!");
 //                 // ERR;
@@ -103,7 +107,8 @@ inline static void makeProcedure(std::vector<Procedure> &pro, Xoroshiro128Plus& 
 //             ++tx.result_->local_abort_counts_;
 //             goto RETRY;
 //         }
-//         storeRelease(tx.result_->local_commit_counts_, loadAcquire(tx.result_->local_commit_counts_) + 1);
+//         storeRelease(tx.result_->local_commit_counts_,
+//         loadAcquire(tx.result_->local_commit_counts_) + 1);
 //     }
 
 //     static void makeDB() {
@@ -117,14 +122,15 @@ inline static void makeProcedure(std::vector<Procedure> &pro, Xoroshiro128Plus& 
 //             Tuple* tmp = new Tuple();
 //             tmp->init(TupleBody(key.view(), std::move(obj)));
 //             Table.emplace_back(key.view(), tmp);
-//             // Masstrees[get_storage(Storage::YCSB)].insert_value(key.view(), tmp);
+//             // Masstrees[get_storage(Storage::YCSB)].insert_value(key.view(),
+//             tmp);
 //         }
 //     }
 
 // };
 
 class YcsbWorkload {
-public:
+  public:
     Xoroshiro128Plus rnd_;
     FastZipf zipf_;
 
@@ -135,14 +141,15 @@ public:
     }
 
     template <typename TxExecutor, typename TransactionStatus>
-    void run(TxExecutor& tx) {
+    void run(TxExecutor &tx) {
         makeProcedure(tx.pro_set_, rnd_, zipf_);
-RETRY:
+    RETRY:
         if (tx.isLeader()) {
             tx.leaderWork();
         }
 
-        if (loadAcquire(tx.quit_)) return;
+        if (loadAcquire(tx.quit_))
+            return;
 
         tx.begin();
         SimpleKey<8> key[tx.pro_set_.size()];
@@ -170,7 +177,8 @@ RETRY:
                 //   obj[i].template allocate<YCSB>();
                 //   YCSB& new_tuple = obj[i].ref();
                 //   memcpy(new_tuple.val_, old_tuple.val_, VAL_SIZE);
-                //   tx.write(Storage::YCSB, key[i].view(), TupleBody(key[i].view(), std::move(obj[i])));
+                //   tx.write(Storage::YCSB, key[i].view(),
+                //   TupleBody(key[i].view(), std::move(obj[i])));
                 // }
             } else {
                 printf("okasiizo!");
@@ -191,43 +199,41 @@ RETRY:
             ++tx.result_->local_abort_counts_;
             goto RETRY;
         }
-        storeRelease(tx.result_->local_commit_counts_,
-                     loadAcquire(tx.result_->local_commit_counts_) + 1);
+        storeRelease(tx.result_->local_commit_counts_, loadAcquire(tx.result_->local_commit_counts_) + 1);
 
         return;
     }
 
     template <typename Tuple, typename Param>
-    static void partTableInit([[maybe_unused]] size_t thid, Param* p, uint64_t start, uint64_t end) {
-      for (auto i = start; i <= end; ++i) {
-        SimpleKey<8> key;
-        YCSB::CreateKey(i, key.ptr());
-        // HeapObject obj;
-        // obj.allocate<YCSB>();
-        // YCSB& ycsb_tuple = obj.ref();
-        // ycsb_tuple.id_ = i;
-        Tuple* tmp = new Tuple(key.view(), 0);
-        tmp->init();
-        Table.put(key.view(),tmp,1);
-        // Masstrees[get_storage(Storage::YCSB)].insert_value(key.view(), tmp);
-      }
+    static void partTableInit([[maybe_unused]] size_t thid, Param *p, uint64_t start, uint64_t end) {
+        for (auto i = start; i <= end; ++i) {
+            SimpleKey<8> key;
+            YCSB::CreateKey(i, key.ptr());
+            // HeapObject obj;
+            // obj.allocate<YCSB>();
+            // YCSB& ycsb_tuple = obj.ref();
+            // ycsb_tuple.id_ = i;
+            Tuple *tmp = new Tuple(key.view(), 0);
+            tmp->init();
+            Table[0].put(key.view(), tmp, 1);
+            // Masstrees[get_storage(Storage::YCSB)].insert_value(key.view(),
+            // tmp);
+        }
     }
 
-    static uint32_t getTableNum() {
-      return (uint32_t)Storage::Size;
-    }
+    static uint32_t getTableNum() { return (uint32_t)Storage::Size; }
 
-    template <typename Tuple, typename Param>
-    static void makeDB(Param* p) {
-    //   size_t maxthread = decideParallelBuildNumber(TUPLE_NUM);
-    size_t maxthread = 1;
+    template <typename Tuple, typename Param> static void makeDB(Param *p) {
+        //   size_t maxthread = decideParallelBuildNumber(TUPLE_NUM);
+        size_t maxthread = 1;
 
-      std::vector<std::thread> thv;
-      for (size_t i = 0; i < maxthread; ++i)
-        thv.emplace_back(partTableInit<Tuple,Param>, i, p,
-                        i * (TUPLE_NUM / maxthread),
-                        (i + 1) * (TUPLE_NUM / maxthread) - 1);
-      for (auto &th : thv) th.join();
+        std::vector<std::thread> thv;
+        for (size_t i = 0; i < maxthread; ++i)
+            thv.emplace_back(partTableInit<Tuple, Param>, i, p,
+                             i * (TUPLE_NUM / maxthread),
+                             (i + 1) * (TUPLE_NUM / maxthread) - 1);
+        for (auto &th : thv)
+            th.join();
     }
 
     // static void displayWorkloadParameter() {

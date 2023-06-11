@@ -52,7 +52,7 @@ public:
 };
 
 #if INDEX_PATTERN == 0
-extern OptCuckoo<Tuple*> Table;
+extern std::vector<OptCuckoo<Tuple*>> Table;
 #elif INDEX_PATTERN == 1
 extern LinearIndex<Tuple*> Table;
 #else

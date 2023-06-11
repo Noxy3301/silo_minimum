@@ -39,7 +39,7 @@ Status TxExecutor::read(Storage s, std::string key) {
 
     // Search tuple from data structure
     Tuple *tuple;
-    tuple = Table.get(key);
+    tuple = Table[0].get(key);
     // tuple = Masstrees[get_storage(s)].get_value(key);   // TODO: ここをOCHに変える
     if (tuple == nullptr) return Status::WARN_NOT_FOUND;
 
@@ -150,7 +150,7 @@ Status TxExecutor::write(Storage s, std::string key) {
     if (re) {
         tuple = re->rcdptr_;
     } else {
-        tuple = Table.get(key);
+        tuple = Table[0].get(key);
         // tuple = Masstrees[get_storage(s)].get_value(key);   // TODO: OCHに変える
         if (tuple == nullptr) return Status::WARN_NOT_FOUND;
     }
