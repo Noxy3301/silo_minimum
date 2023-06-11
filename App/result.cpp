@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <iomanip>
 
 #include "../Include/consts.h"
 #include "../Include/result.h"
@@ -20,16 +21,26 @@ void Result::displayAllResult() {
     displayAbortCounts();
 }
 
+void printLine(int setw_space, std::vector<std::string> strings) {
+    for (auto str : strings) {
+        cout << std::setw(setw_space) << std::left << str;
+    }
+    cout << endl;
+}
+
 void Result::displayLocalDetailResult(const int thid) {
-    cout << 
-    "thread#"           << thid << 
-    "\tcommit: "        << local_commit_counts_ << 
-    "\tabort:"          << local_abort_counts_ << 
-    "\tabort_VP1: "     << local_abort_by_validation1_ <<  // aborted by validation phase 1
-    "\tabort_VP2: "     << local_abort_by_validation2_ <<  // aborted by validation phase 2
-    "\tabort_VP3: "     << local_abort_by_validation3_ <<  // aborted by validation phase 3
-    "\tabort_bNULL: "   << local_abort_by_null_buffer_ <<// aborted by NULL current buffer    
-    endl;
+    int setw_space = 14;
+    if (thid == 0) {
+        printLine(setw_space, {"thread", "commit", "abort", "abort_VP1", "abort_VP2", "abort_VP3", "abort_bNULL"});
+    }
+    printLine(setw_space, {
+        std::to_string(thid),
+        std::to_string(local_commit_counts_), 
+        std::to_string(local_abort_counts_),
+        std::to_string(local_abort_by_validation1_),
+        std::to_string(local_abort_by_validation2_),
+        std::to_string(local_abort_by_validation3_),
+        std::to_string(local_abort_by_null_buffer_)});
 }
 
 void Result::displayDetailResult() {
