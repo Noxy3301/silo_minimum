@@ -4,7 +4,7 @@
 #define THREAD_NUM 9        // Number of worker thread
 #define LOGGER_NUM 3        // Number of logger thread
 #define EPOCH_TIME 40       // Epoch interval[msec]
-#define CLOCKS_PER_US 2900  // CPU_MHz (Use this info for measuring time)
+#define CLOCKS_PER_US 3500  // CPU_MHz (Use this info for measuring time)
 #define EXTIME 3            // Execution time[sec]
 #define CACHE_LINE_SIZE 64  // CPU cache line size
 

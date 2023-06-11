@@ -17,39 +17,42 @@ extern uint64_t ecall_getResult(int thid, int datatype);
 
 extern uint64_t ecall_showDurableEpoch();
 
-template <class T>
-class LinearIndex {
-public:
-    std::vector<Tuple*> table_;
-    int table_size_;
+extern void ecall_showLoggerResult(int thid);
 
-    LinearIndex() {}
+// NOTE: LinearIndexは消すかも
+// template <class T>
+// class LinearIndex {
+// public:
+//     std::vector<Tuple*> table_;
+//     int table_size_;
 
-    void insert_value(T value) {
-        table_.emplace_back(value);
-    }
+//     LinearIndex() {}
 
-    T get(std::string key) {
-        for (int i = 0; i < table_.size(); i++) {
-            // print_String2Hex(table_[i]->key_, false);
-            // cout << " ";
-            // print_String2Hex(key);
-            // cout << "|" << print_hexString(table_[i]->key_) << "|" << print_hexString(key)  << "|" << endl;
-            if (table_[i]->key_ == key) {   // std::cout << "aru" << std::endl;
-                return table_[i];
-            }
-        } // std::cout << "nai" << std::endl;
-        return nullptr;
-    }
+//     void insert_value(T value) {
+//         table_.emplace_back(value);
+//     }
 
-    // void print_String2Hex(std::string str, bool isFlush = true) {
-    //     // debug用、keyを8x8に戻す
-    //     for (int i = 0; i < 8; i++) {
-    //         std::cout << int(uint8_t(str[i])) << ",";
-    //     }
-    //     if (isFlush) std::cout << std::endl;
-    // }
-};
+//     T get(std::string key) {
+//         for (int i = 0; i < table_.size(); i++) {
+//             // print_String2Hex(table_[i]->key_, false);
+//             // cout << " ";
+//             // print_String2Hex(key);
+//             // cout << "|" << print_hexString(table_[i]->key_) << "|" << print_hexString(key)  << "|" << endl;
+//             if (table_[i]->key_ == key) {   // std::cout << "aru" << std::endl;
+//                 return table_[i];
+//             }
+//         } // std::cout << "nai" << std::endl;
+//         return nullptr;
+//     }
+
+//     // void print_String2Hex(std::string str, bool isFlush = true) {
+//     //     // debug用、keyを8x8に戻す
+//     //     for (int i = 0; i < 8; i++) {
+//     //         std::cout << int(uint8_t(str[i])) << ",";
+//     //     }
+//     //     if (isFlush) std::cout << std::endl;
+//     // }
+// };
 
 #if INDEX_PATTERN == 0
 extern std::vector<OptCuckoo<Tuple*>> Table;

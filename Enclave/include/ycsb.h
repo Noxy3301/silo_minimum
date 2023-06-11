@@ -147,39 +147,39 @@ class YcsbWorkload {
         if (tx.isLeader()) {
             tx.leaderWork();
         }
+        tx.durableEpochWork(tx.epoch_timer_start, tx.epoch_timer_stop, quit);
 
         if (loadAcquire(tx.quit_))
             return;
 
         tx.begin();
         SimpleKey<8> key[tx.pro_set_.size()];
-        // HeapObject obj[tx.pro_set_.size()];
+        HeapObject obj[tx.pro_set_.size()];
         uint64_t i = 0;
         for (auto &pro : tx.pro_set_) {
             YCSB::CreateKey(pro.key_, key[i].ptr());
-            // uint64_t k;
-            // parse_bigendian(key[i].view().data(), k);
+            uint64_t k;
+            parse_bigendian(key[i].view().data(), k);
             if (pro.ope_ == Ope::READ) {
-                // TupleBody* body;
-                tx.read(Storage::YCSB, key[i].view());
-                // if (tx.status_ != TransactionStatus::aborted) {
-                //   YCSB& t = body->get_value().cast_to<YCSB>();
-                // }
+                TupleBody *body;
+                tx.read(Storage::YCSB, key[i].view(), &body);
+                if (tx.status_ != TransactionStatus::aborted) {
+                    YCSB &t = body->get_value().cast_to<YCSB>();
+                }
             } else if (pro.ope_ == Ope::WRITE) {
-                // obj[i].template allocate<YCSB>();
-                // YCSB& t = obj[i].ref();
-                tx.write(Storage::YCSB, key[i].view());
+                obj[i].template allocate<YCSB>();
+                YCSB &t = obj[i].ref();
+                tx.write(Storage::YCSB, key[i].view(), TupleBody(key[i].view(), std::move(obj[i])));
             } else if (pro.ope_ == Ope::READ_MODIFY_WRITE) {
-                // TupleBody* body;
-                // tx.read(Storage::YCSB, key[i].view(), &body);
-                // if (tx.status_ != TransactionStatus::aborted) {
-                //   YCSB& old_tuple = body->get_value().cast_to<YCSB>();
-                //   obj[i].template allocate<YCSB>();
-                //   YCSB& new_tuple = obj[i].ref();
-                //   memcpy(new_tuple.val_, old_tuple.val_, VAL_SIZE);
-                //   tx.write(Storage::YCSB, key[i].view(),
-                //   TupleBody(key[i].view(), std::move(obj[i])));
-                // }
+                TupleBody *body;
+                tx.read(Storage::YCSB, key[i].view(), &body);
+                if (tx.status_ != TransactionStatus::aborted) {
+                    YCSB &old_tuple = body->get_value().cast_to<YCSB>();
+                    obj[i].template allocate<YCSB>();
+                    YCSB &new_tuple = obj[i].ref();
+                    memcpy(new_tuple.val_, old_tuple.val_, VAL_SIZE);
+                    tx.write(Storage::YCSB, key[i].view(), TupleBody(key[i].view(), std::move(obj[i])));
+                }
             } else {
                 printf("okasiizo!");
                 // ERR;
@@ -199,25 +199,25 @@ class YcsbWorkload {
             ++tx.result_->local_abort_counts_;
             goto RETRY;
         }
-        storeRelease(tx.result_->local_commit_counts_, loadAcquire(tx.result_->local_commit_counts_) + 1);
+        storeRelease(tx.result_->local_commit_counts_,
+                     loadAcquire(tx.result_->local_commit_counts_) + 1);
 
         return;
     }
 
     template <typename Tuple, typename Param>
-    static void partTableInit([[maybe_unused]] size_t thid, Param *p, uint64_t start, uint64_t end) {
+    static void partTableInit([[maybe_unused]] size_t thid, Param *p,
+                              uint64_t start, uint64_t end) {
         for (auto i = start; i <= end; ++i) {
             SimpleKey<8> key;
             YCSB::CreateKey(i, key.ptr());
-            // HeapObject obj;
-            // obj.allocate<YCSB>();
-            // YCSB& ycsb_tuple = obj.ref();
-            // ycsb_tuple.id_ = i;
-            Tuple *tmp = new Tuple(key.view(), 0);
-            tmp->init();
-            Table[0].put(key.view(), tmp, 1);
-            // Masstrees[get_storage(Storage::YCSB)].insert_value(key.view(),
-            // tmp);
+            HeapObject obj;
+            obj.allocate<YCSB>();
+            YCSB& ycsb_tuple = obj.ref();
+            ycsb_tuple.id_ = i;
+            Tuple* tmp = new Tuple();
+            tmp->init(thid, TupleBody(key.view(), std::move(obj)), p);
+            Table[get_storage(Storage::YCSB)].put(key.view(), tmp, 1);
         }
     }
 

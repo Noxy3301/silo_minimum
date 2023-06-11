@@ -21,19 +21,19 @@ void Result::displayAllResult() {
     displayAbortCounts();
 }
 
-void printLine(int setw_space, std::vector<std::string> strings) {
+void printLine(int setw_length, std::vector<std::string> strings) {
     for (auto str : strings) {
-        cout << std::setw(setw_space) << std::left << str;
+        cout << std::setw(setw_length) << std::left << str;
     }
     cout << endl;
 }
 
 void Result::displayLocalDetailResult(const int thid) {
-    int setw_space = 14;
+    int setw_length = 14;
     if (thid == 0) {
-        printLine(setw_space, {"thread", "commit", "abort", "abort_VP1", "abort_VP2", "abort_VP3", "abort_bNULL"});
+        printLine(setw_length, {"thread", "commit", "abort", "abort_VP1", "abort_VP2", "abort_VP3", "abort_bNULL"});
     }
-    printLine(setw_space, {
+    printLine(setw_length, {
         std::to_string(thid),
         std::to_string(local_commit_counts_), 
         std::to_string(local_abort_counts_),
@@ -45,16 +45,26 @@ void Result::displayLocalDetailResult(const int thid) {
 
 void Result::displayDetailResult() {
     uint64_t result = total_commit_counts_ / EXTIME;
+    int setw_length = 30;
+    printLine(setw_length, {"[info]\tcommit_counts_", std::to_string(total_commit_counts_)});
+    printLine(setw_length, {"[info]\tabort_counts_", std::to_string(total_abort_counts_)});
+    printLine(setw_length+2, {"[info]\t ├ abort_validation1", std::to_string(total_abort_by_validation1_)});
+    printLine(setw_length+2, {"[info]\t ├ abort_validation2", std::to_string(total_abort_by_validation2_)});
+    printLine(setw_length+2, {"[info]\t ├ abort_validation3", std::to_string(total_abort_by_validation3_)});
+    printLine(setw_length+2, {"[info]\t └ abort_NULLbuffer", std::to_string(total_abort_by_null_buffer_)});
+    printLine(setw_length, {"[info]\tabort_rate", std::to_string((double)total_abort_counts_ / (double)(total_commit_counts_ + total_abort_counts_))});
+    printLine(setw_length, {"[info]\tlatency[ns]", std::to_string(powl(10.0, 9.0) / result * THREAD_NUM)});
+    printLine(setw_length, {"[info]\tthroughput[tps]", std::to_string(result)});
 
-    cout << "[info]\tcommit_counts_:\t"     << total_commit_counts_ << endl;
-    cout << "[info]\tabort_counts_:\t"      << total_abort_counts_ << endl;
-    cout << "[info]\t-abort_validation1:\t" << total_abort_by_validation1_ << endl;
-    cout << "[info]\t-abort_validation2:\t" << total_abort_by_validation2_ << endl;
-    cout << "[info]\t-abort_validation3:\t" << total_abort_by_validation3_ << endl;
-    cout << "[info]\t-abort_NULLbuffer:\t"  << total_abort_by_null_buffer_ << endl;
-    cout << "[info]\tabort_rate:\t" << (double)total_abort_counts_ / (double)(total_commit_counts_ + total_abort_counts_) << endl;
-    cout << "[info]\tlatency[ns]:\t" << powl(10.0, 9.0) / result * THREAD_NUM << endl;
-    cout << "[info]\tthroughput[tps]:\t" << result << endl;
+    // cout << "[info]\tcommit_counts_:\t"     << total_commit_counts_ << endl;
+    // cout << "[info]\tabort_counts_:\t"      << total_abort_counts_ << endl;
+    // cout << "[info]\t├abort_validation1:\t" << total_abort_by_validation1_ << endl;
+    // cout << "[info]\t├abort_validation2:\t" << total_abort_by_validation2_ << endl;
+    // cout << "[info]\t├abort_validation3:\t" << total_abort_by_validation3_ << endl;
+    // cout << "[info]\t└abort_NULLbuffer:\t"  << total_abort_by_null_buffer_ << endl;
+    // cout << "[info]\tabort_rate:\t" << (double)total_abort_counts_ / (double)(total_commit_counts_ + total_abort_counts_) << endl;
+    // cout << "[info]\tlatency[ns]:\t" << powl(10.0, 9.0) / result * THREAD_NUM << endl;
+    // cout << "[info]\tthroughput[tps]:\t" << result << endl;
 }
 
 void Result::addLocalAbortCounts(const uint64_t count) {

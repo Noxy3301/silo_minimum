@@ -132,7 +132,8 @@ template <class T> class OptCuckoo {
         return make_pair(h1, h2);
     }
 
-    T get(std::string key) {
+    T get(std::string_view sv_key) {
+        std::string key{sv_key};
         uint32_t h1 = 0, h2 = 0;
         auto res = hash2(key);
         h1 = res.first, h2 = res.second;
