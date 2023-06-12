@@ -40,6 +40,12 @@ std::atomic<int> ocall_count(0);
 // MARK: main function
 
 int main() {
+#if BENCHMARK == 0
+    std::cout << "TPC-C-NP Silo benchmark" << std::endl;
+#elif BENCHMARK == 1
+    std::cout << "YCSB Silo benchmark" << std::endl;
+#endif
+
     chrono::system_clock::time_point p1, p2, p3, p4, p5;
 #if SHOW_DETAILS
     displayParameter();
