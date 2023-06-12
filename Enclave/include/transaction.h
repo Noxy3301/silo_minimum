@@ -12,6 +12,7 @@
 #include "status.hh"
 #include "workload.hh"
 #include "tuple.h"
+#include "tpcc/tpcc_tables.hh"
 
 enum class TransactionStatus : uint8_t {
     invalid,

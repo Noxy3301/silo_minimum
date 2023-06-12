@@ -100,6 +100,7 @@ void ecall_worker_th(int thid, int gid) {
 
 #if BENCHMARK == 0  // TPC-C-NP benchmark
     TPCCWorkload<Tuple,void> workload;
+    workload.prepare(trans, nullptr);
 #elif BENCHMARK == 1    // YCSB benchmark
     YcsbWorkload workload;
 #endif

@@ -42,13 +42,13 @@ template <typename Tuple, typename Param> class TPCCInitializaer {
         Table[get_storage(st)].put(key, tuple, 1);  // OCHはTIDを入れる仕様になっているから、3つ目の引数はとりあえず1
 
         // DEBUG: ちゃんと格納できているか確認
-        {
-            Tuple *checkTuple = Table[get_storage(st)].get(key);
-            if (tuple != checkTuple) {
-                std::cout << "tigauzo!" << std::endl;
-            }
-            // std::cout << (tuple == checkTuple) << std::endl;
-        }
+        // {
+        //     Tuple *checkTuple = Table[get_storage(st)].get(key);
+        //     if (tuple != checkTuple) {
+        //         std::cout << "tigauzo!" << std::endl;
+        //     }
+        //     // std::cout << (tuple == checkTuple) << std::endl;
+        // }
 
         // TODO: status handling
         // Status sta = kohler_masstree::insert_record(st, key, rec);

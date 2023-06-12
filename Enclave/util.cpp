@@ -48,6 +48,7 @@ void ecall_initDB() {
     std::cout << str << "\r" << std::flush;   // DEBUG: atode kesu
     for (int i = 0; i < 10; i++) {
 #if BENCHMARK == 0
+        // Table[i].init(1000);
         // Table[i].init(MAX_ITEMS*2);
         Table[i].init(TUPLE_NUM*2);
 #elif BENCHMARK == 1

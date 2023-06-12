@@ -51,9 +51,9 @@
 #define TPCC_PERC_STOCK_LEVEL 0  // The percentage of Stock-Level transactions
 #define TPCC_INTERACTIVE_MS 0    // Sleep milliseconds per SQL(-equivalent) unit
 
-constexpr std::size_t DIST_PER_WARE{10};
-constexpr std::size_t MAX_ITEMS{100};
-constexpr std::size_t CUST_PER_DIST{3000};
-constexpr std::size_t LASTNAME_LEN{16};
+constexpr std::size_t DIST_PER_WARE{10};    // default 10
+constexpr std::size_t MAX_ITEMS{100000};    // default 100000
+constexpr std::size_t CUST_PER_DIST{3000};  // default 3000
+constexpr std::size_t LASTNAME_LEN{16};     // default 16
 
-#define DEBUG 1
+// #define DEBUG 1
