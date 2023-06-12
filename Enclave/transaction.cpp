@@ -29,8 +29,40 @@ void TxExecutor::begin() {
     nid_ = NotificationId(nid_counter_++, thid_, rdtscp()); // for logging
 }
 
-// TODO: Status TxExecutor::insert(Storage s, std::string_view key, TupleBody&&
-// body) {};
+Status TxExecutor::insert(Storage s, std::string_view key, TupleBody &&body) {
+#if ADD_ANALYSIS
+    std::uint64_t start = rdtscp();
+#endif
+
+    if (searchWriteSet(s, key))
+        return Status::WARN_ALREADY_EXISTS;
+
+    //   Tuple* tuple = Masstrees[get_storage(s)].get_value(key);
+    Tuple *tuple = Table[get_storage(s)].get(key);
+    // #if ADD_ANALYSIS
+    //   ++result_->local_tree_traversal_;
+    // #endif
+    if (tuple != nullptr) {
+        return Status::WARN_ALREADY_EXISTS;
+    }
+
+    tuple = new Tuple();
+    tuple->init(std::move(body));
+
+    //   Status stat = Masstrees[get_storage(s)].insert_value(key, tuple);
+    Status stat = Table[get_storage(s)].put(key, tuple, 1); // CHECK: OCHはTIDを使っているのか確認
+    if (stat == Status::WARN_ALREADY_EXISTS) {
+        delete tuple;
+        return stat;
+    }
+
+    write_set_.emplace_back(s, key, tuple, OpType::INSERT);
+
+    // #if ADD_ANALYSIS
+    //   result_->local_write_latency_ += rdtscp() - start;
+    // #endif
+    return Status::OK;
+}
 
 void TxExecutor::lockWriteSet() {
     Tidword expected, desired;

@@ -33,7 +33,7 @@ class TxExecutor {
         
         // transaction status 
         TransactionStatus status_;
-        unsigned int thid_;
+        size_t thid_;
         Result *result_;
         uint64_t epoch_timer_start, epoch_timer_stop;
         const bool& quit_; // for thread termination control

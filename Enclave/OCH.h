@@ -15,6 +15,8 @@
 
 #include "common/hash.h"
 
+#include "include/status.hh"
+
 using namespace std;
 
 class MyLock {
@@ -47,9 +49,9 @@ template <class T> class OptCuckoo {
     class Data {
       public:
         std::string key;
-        T val;
+        T *val;
         Data() {}
-        Data(std::string t_key, T t_val) {
+        Data(std::string t_key, T *t_val) {
             key = t_key;
             val = t_val;
         }
@@ -59,7 +61,7 @@ template <class T> class OptCuckoo {
         unsigned char tag; // why? how many bits?
         Data *data;
         Node() {}
-        Node(unsigned char t_tag, std::string t_key, T t_val) {
+        Node(unsigned char t_tag, std::string t_key, T *t_val) {
             tag = t_tag;
             data = new Data(t_key, t_val);
         }
@@ -132,7 +134,7 @@ template <class T> class OptCuckoo {
         return make_pair(h1, h2);
     }
 
-    T get(std::string_view sv_key) {
+    T *get(std::string_view sv_key) {
         std::string key{sv_key};
         uint32_t h1 = 0, h2 = 0;
         auto res = hash2(key);
@@ -153,7 +155,7 @@ template <class T> class OptCuckoo {
                 if (node != NULL && node->tag == tag && node->data != NULL) {
                     Data *data = node->data;
                     if (key == data->key) {
-                        T val = data->val;
+                        T *val = data->val;
                         uint32_t end_version = get_version(h1, i);
                         if (start_version != end_version ||
                             start_version & 0x1) {
@@ -171,7 +173,7 @@ template <class T> class OptCuckoo {
                 if (node != NULL && node->tag == tag && node->data != NULL) {
                     Data *data = node->data;
                     if (key == data->key) {
-                        T val = data->val;
+                        T *val = data->val;
                         uint32_t end_version = get_version(h2, i);
                         if (start_version != end_version ||
                             start_version & 0x1) {
@@ -184,25 +186,32 @@ template <class T> class OptCuckoo {
             }
 
             // not found
-            T temp_val;
-            return temp_val;
+            return nullptr;
         }
     }
 
-    void put(std::string key, T val, int TID) {
+    Status put(std::string_view sv_key, T *val, int TID) {
+        std::string key{sv_key};
+        Status st;
         int i = 0;
-        while (!put_impl(key, val, TID)) {
+        while (!put_impl(key, val, TID, st)) {
             ABORT();
             i++;
             if (i >= 100000) {
-                return;
+                return Status::WARN_NOT_FOUND;  // TODO: ここのエラーハンドリングが名前とやっていることで一致していないからあとで直す
             }
         }
+        return st;
     }
 
-    bool put_impl(std::string key, T val, int TID) {
+    // Status put(std::string_view sv_key, T *val, int TID) {
+    //     // void putはdataのduplicationを許容しなさそうなのでこれで代用しておく
+        
+    // }
+
+    bool put_impl(std::string key, T *val, int TID, Status &status) {
         std::string original_key = key;
-        T original_val = val;
+        T *original_val = val;
         unsigned char original_tag;
 
         vector<pair<uint32_t, int>> path;
@@ -243,6 +252,7 @@ template <class T> class OptCuckoo {
                 table[index.first][index.second] = original_node;
                 increase_version(index.first, index.second);
                 table_locks[index.first][index.second].unlock();
+                status = Status::OK;
                 return true;
             } else if (node->tag == tag && node->data->key == key) {
                 table_locks[th1][i].lock();
@@ -250,10 +260,11 @@ template <class T> class OptCuckoo {
                     table_locks[th1][i].unlock();
                     continue;
                 }
-                increase_version(th1, i);
-                node->data->val = val;
-                increase_version(th1, i);
+                // increase_version(th1, i);
+                // node->data->val = val;
+                // increase_version(th1, i);
                 table_locks[th1][i].unlock();
+                status = Status::WARN_ALREADY_EXISTS;
                 return true;
             }
         }
@@ -272,6 +283,7 @@ template <class T> class OptCuckoo {
                 table[index.first][index.second] = original_node;
                 increase_version(index.first, index.second);
                 table_locks[index.first][index.second].unlock();
+                status = Status::OK;
                 return true;
             } else if (node->tag == tag && node->data->key == key) {
                 table_locks[th2][i].lock();
@@ -279,10 +291,11 @@ template <class T> class OptCuckoo {
                     table_locks[th2][i].unlock();
                     continue;
                 }
-                increase_version(th2, i);
-                node->data->val = val;
-                increase_version(th2, i);
+                // increase_version(th2, i);
+                // node->data->val = val;
+                // increase_version(th2, i);
                 table_locks[th2][i].unlock();
+                status = Status::WARN_ALREADY_EXISTS;
                 return true;
             }
         }
@@ -311,7 +324,7 @@ template <class T> class OptCuckoo {
             assert(this->table[before.first][before.second] != NULL);
             v.push_back(get_version(before.first, before.second));
             std::string key = table[before.first][before.second]->data->key;
-            T val = table[before.first][before.second]->data->val;
+            T *val = table[before.first][before.second]->data->val;
             uint32_t h1 = 0, h2 = 0;
 
             auto res = hash2(key);
@@ -338,6 +351,7 @@ template <class T> class OptCuckoo {
                 }
             }
             if (is_success) {
+                status = Status::OK;
                 return;
             }
 
@@ -354,6 +368,7 @@ template <class T> class OptCuckoo {
                 }
             }
             if (is_success) {
+                status = Status::OK;
                 return;
             }
 
@@ -442,6 +457,7 @@ template <class T> class OptCuckoo {
         table[path[0].first][path[0].second] = original_node;
         increase_version(path[0].first, path[0].second);
         table_locks[path[0].first][path[0].second].unlock();
+        status = Status::OK;
         return true;
     }
 };

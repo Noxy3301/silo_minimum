@@ -1,7 +1,12 @@
 #include <random>
 
 #include "include/util.h"
+
+#if BENCHMARK == 0
+#include "include/tpcc.h"
+#elif BENCHMARK == 1
 #include "include/ycsb.h"
+#endif
 
 bool chkEpochLoaded() {
     uint64_t nowepo = atomicLoadGE();
@@ -42,7 +47,12 @@ void ecall_initDB() {
     std::string str = "[info]\t Initializing table ";   // DEBUG: atode kesu
     std::cout << str << "\r" << std::flush;   // DEBUG: atode kesu
     for (int i = 0; i < 10; i++) {
+#if BENCHMARK == 0
+        // Table[i].init(MAX_ITEMS*2);
         Table[i].init(TUPLE_NUM*2);
+#elif BENCHMARK == 1
+        Table[i].init(TUPLE_NUM*2);
+#endif
         str = str + ".";
         std::cout << str << "\r" << std::flush;
     }

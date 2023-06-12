@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tpcc_common.hh"
+// #include "tpcc_common.hh"
 #include "tpcc_util.hh"
 // #include "../include/random.hh"
 // #include "../include/result.hh"
@@ -29,14 +29,14 @@ namespace TPCCQuery {
 
 class Option {
 public:
-  std::uint32_t num_wh = FLAGS_tpcc_num_wh;
+  std::uint32_t num_wh = TPCC_NUM_WH;
   std::uint32_t dist_per_ware = DIST_PER_WARE;
   std::uint32_t max_items = MAX_ITEMS;
   std::uint32_t cust_per_dist = CUST_PER_DIST;
-  std::uint64_t perc_payment = FLAGS_tpcc_perc_payment;
-  std::uint64_t perc_order_status = FLAGS_tpcc_perc_order_status;
-  std::uint64_t perc_delivery = FLAGS_tpcc_perc_delivery;
-  std::uint64_t perc_stock_level = FLAGS_tpcc_perc_stock_level;
+  std::uint64_t perc_payment = TPCC_PERC_PAYMENT;
+  std::uint64_t perc_order_status = TPCC_PERC_ORDER_STATUS;
+  std::uint64_t perc_delivery = TPCC_PERC_DELIVERY;
+  std::uint64_t perc_stock_level = TPCC_PERC_STOCK_LEVEL;
 
   /**
    * 0                                                    UINT64_MAX

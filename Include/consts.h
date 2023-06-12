@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 // common settings
 #define THREAD_NUM 9        // Number of worker thread
 #define LOGGER_NUM 3        // Number of logger thread
@@ -39,4 +41,19 @@
 // Benchmark pattern
 // 0: Use TPC-C-NP benchmark. wip
 // 1: Use YCSB benchmark.
-#define BENCHMARK 1
+#define BENCHMARK 0
+
+// TPC-C-NP settings
+#define TPCC_NUM_WH 1            // The number of warehouses
+#define TPCC_PERC_PAYMENT 50     // The percentage of Payment transactions
+#define TPCC_PERC_ORDER_STATUS 0 // The percentage of Order-Status transactions
+#define TPCC_PERC_DELIVERY 0     // The percentage of Delivery transactions
+#define TPCC_PERC_STOCK_LEVEL 0  // The percentage of Stock-Level transactions
+#define TPCC_INTERACTIVE_MS 0    // Sleep milliseconds per SQL(-equivalent) unit
+
+constexpr std::size_t DIST_PER_WARE{10};
+constexpr std::size_t MAX_ITEMS{100};
+constexpr std::size_t CUST_PER_DIST{3000};
+constexpr std::size_t LASTNAME_LEN{16};
+
+#define DEBUG 1
