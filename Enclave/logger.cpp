@@ -66,7 +66,7 @@ std::uint64_t Logger::find_min_epoch() {
             min_ctid = ctid;
         }
     }
-    Tidword tid;
+    TIDword tid;
     tid.obj_ = min_ctid;
     std::uint64_t min_epoch = tid.epoch;
     // check
@@ -122,7 +122,7 @@ void Logger::worker() {
     // Logger終わったンゴ連絡
     notifier_stats_.logger_end(this);
     logger_end();
-    show_result();  // TODO: 順番揃えたいけどな
+    show_result();
 }
 
 void Logger::worker_end(int thid) {
@@ -150,7 +150,7 @@ void Logger::show_result() {
     static std::mutex mtx;
     std::lock_guard<std::mutex> lock(mtx);
 #if SHOW_DETAILS
-    cout << "Logger#"<< thid_
+    cout << "Logger#"<<thid_
          <<" byte_count[B]=" << byte_count_
          <<" write_latency[s]=" << write_latency_/cps
          <<" throughput[B/s]=" << byte_count_/(write_latency_/cps)

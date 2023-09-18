@@ -8,7 +8,6 @@
 
 #include "common.h"
 #include "tsc.h"    // start_clock_記録するように使ってる
-#include "tuple.h"
 
 class NotificationId {
     public:
@@ -22,7 +21,7 @@ class NotificationId {
         NotificationId() { NotificationId(0, 0, 0); }
 
         std::uint64_t epoch() {
-            Tidword tid;
+            TIDword tid;
             tid.obj_ = tid_;
             return tid.epoch;
         }

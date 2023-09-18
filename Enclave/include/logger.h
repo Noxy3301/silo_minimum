@@ -23,6 +23,7 @@ class Logger {
 
         void logging(bool quit);
         void rotate_logfile(uint64_t epoch);
+        void show_result();
 
     public:
         int thid_;
@@ -55,5 +56,4 @@ class Logger {
         void wait_deq();
         void worker_end(int thid);
         void logger_end();
-        void show_result();
 };
