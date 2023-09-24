@@ -46,8 +46,9 @@ class Logger {
         std::uint64_t write_start_ = 0;
         std::uint64_t write_end_ = 0;
         // Stats depoch_diff_;
+        LoggerResult &logger_result_;
 
-        Logger(int i, Notifier &n) : thid_(i), notifier_stats_(n) {}
+        Logger(int i, Notifier &n, LoggerResult &myres) : thid_(i), notifier_stats_(n), logger_result_(myres) {}
 
         void add_tx_executor(TxExecutor &trans);
         void worker();
@@ -56,4 +57,5 @@ class Logger {
         void wait_deq();
         void worker_end(int thid);
         void logger_end();
+        void store_result();
 };

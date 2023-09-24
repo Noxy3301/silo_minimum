@@ -35,7 +35,8 @@ std::vector<uint64_t> CTIDW(THREAD_NUM);
 std::vector<uint64_t> ThLocalDurableEpoch(LOGGER_NUM);
 uint64_t DurableEpoch;
 uint64_t GlobalEpoch = 1;
-std::vector<returnResult> results(THREAD_NUM);
+std::vector<WorkerResult> workerResults(THREAD_NUM); // worker threadのデータ
+std::vector<LoggerResult> loggerResults(LOGGER_NUM); // logger threadのデータ
 std::atomic<Logger *> logs[LOGGER_NUM];
 Notifier notifier;
 std::vector<int> readys(THREAD_NUM);
@@ -78,7 +79,7 @@ unsigned get_rand() {
 
 void ecall_worker_th(int thid, int gid) {
     TxExecutor trans(thid);
-    returnResult &myres = std::ref(results[thid]);
+    WorkerResult &myres = std::ref(workerResults[thid]);
     uint64_t epoch_timer_start, epoch_timer_stop;
     
     unsigned init_seed;
@@ -131,12 +132,29 @@ void ecall_worker_th(int thid, int gid) {
    
         if (trans.validationPhase()) {
             trans.writePhase();
-            storeRelease(myres.local_commit_counts_, loadAcquire(myres.local_commit_counts_) + 1);
+            storeRelease(myres.local_commit_count_, loadAcquire(myres.local_commit_count_) + 1);
         } else {
             trans.abort();
+            // TODO: ここ汚いからtransの方でいい感じに処理してenumでごねごねする
             assert(trans.abort_res_ != 0);
-            myres.local_abort_res_counts_[trans.abort_res_ - 1]++;
-            myres.local_abort_counts_++;
+            switch (trans.abort_res_) {
+                case 1:
+                    myres.local_abort_vp1_count_++;
+                    break;
+                case 2:
+                    myres.local_abort_vp2_count_++;
+                    break;
+                case 3:
+                    myres.local_abort_vp3_count_++;
+                    break;
+                case 4:
+                    myres.local_abort_nullBuffer_count_++;
+                    break;
+                default:
+                    assert(false);
+                    break;
+            }
+            myres.local_abort_count_++;
             goto RETRY;
         }
     }
@@ -148,7 +166,7 @@ void ecall_worker_th(int thid, int gid) {
 }
 
 void ecall_logger_th(int thid) {
-    Logger logger(thid, std::ref(notifier));
+    Logger logger(thid, std::ref(notifier), std::ref(loggerResults[thid]));
     notifier.add_logger(&logger);
     std::atomic<Logger*> *logp = &(logs[thid]);
     logp->store(&logger);
@@ -156,16 +174,47 @@ void ecall_logger_th(int thid) {
     return;
 }
 
-uint64_t ecall_getAbortResult(int thid) {
-    return results[thid].local_abort_counts_;
+uint64_t ecall_getAbortCount(int thid) {
+    return workerResults[thid].local_abort_count_;
 }
 
-uint64_t ecall_getCommitResult(int thid) {
-    return results[thid].local_commit_counts_;
+uint64_t ecall_getCommitCount(int thid) {
+    return workerResults[thid].local_commit_count_;
 }
 
-uint64_t ecall_getAbortResResult(int thid, int res) {
-    return results[thid].local_abort_res_counts_[res];
+uint64_t ecall_getSpecificAbortCount(int thid, int reason) {
+    switch (reason) {
+        case AbortReason::ValidationPhase1:
+            return workerResults[thid].local_abort_vp1_count_;
+        case AbortReason::ValidationPhase2:
+            return workerResults[thid].local_abort_vp2_count_;
+        case AbortReason::ValidationPhase3:
+            return workerResults[thid].local_abort_vp3_count_;
+        case AbortReason::NullCurrentBuffer:
+            return workerResults[thid].local_abort_nullBuffer_count_;
+        default:
+            assert(false);  // ここに来てはいけない
+            return 0;
+    }
+}
+
+uint64_t ecall_getLoggerCount(int thid, int type) {
+    // double cps = CLOCKS_PER_US*1e6;
+    // uint64_t byte_count = loggerResults[thid].byte_count_;
+    // double write_latency = loggerResults[thid].write_latency_/cps;
+    // double throughput = loggerResults[thid].byte_count_/(loggerResults[thid].write_latency_/cps);
+    // double wait_latency = loggerResults[thid].wait_latency_/cps;
+	switch (type) {
+		case LoggerResultType::ByteCount:
+			return loggerResults[thid].byte_count_;
+		case LoggerResultType::WriteLatency:
+			return loggerResults[thid].write_latency_;
+        case LoggerResultType::WaitLatency:
+            return loggerResults[thid].wait_latency_;
+		default: 
+			assert(false);  // ここに来てはいけない
+            return 0;
+	}
 }
 
 uint64_t ecall_showDurableEpoch() {
