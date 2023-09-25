@@ -15,6 +15,7 @@ file(GLOB_RECURSE SILO_SOURCES
     "App/**/*.cpp"
     "Enclave/*.cpp"
 )
+list(REMOVE_ITEM SILO_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/Enclave/masstree/main.cpp")
 
 #set(CMAKE_CXX_FLAGS "-pthread -fpermissive -Wreturn-type")
 
