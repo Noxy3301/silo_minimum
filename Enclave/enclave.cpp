@@ -25,22 +25,26 @@ using std::endl;
 
 #include "OCH.cpp"
 
-#if INDEX_PATTERN == 2
+#if INDEX_PATTERN == INDEX_USE_MASSTREE
+// do define masstree table
+#elif INDEX_PATTERN == INDEX_USE_OCH
 OptCuckoo<Tuple*> Table(TUPLE_NUM*2);
-#else
-std::vector<Tuple> Table(TUPLE_NUM);
 #endif
-std::vector<uint64_t> ThLocalEpoch(THREAD_NUM);
-std::vector<uint64_t> CTIDW(THREAD_NUM);
-std::vector<uint64_t> ThLocalDurableEpoch(LOGGER_NUM);
-uint64_t DurableEpoch;
-uint64_t GlobalEpoch = 1;
-std::vector<WorkerResult> workerResults(THREAD_NUM); // worker threadのデータ
-std::vector<LoggerResult> loggerResults(LOGGER_NUM); // logger threadのデータ
-std::atomic<Logger *> logs[LOGGER_NUM];
-Notifier notifier;
-std::vector<int> readys(THREAD_NUM);
 
+uint64_t GlobalEpoch = 1;                       // Global Epoch
+std::vector<uint64_t> ThLocalEpoch(THREAD_NUM); // 各ワーカースレッドのLocal epoch, Global epochを参照せず、epoch更新時に更新されるLocal epochを参照してtxを処理する
+std::vector<uint64_t> CTIDW(THREAD_NUM);        // 各ワーカースレッドのCommit Timestamp ID, TID算出時にWorkerが発行したTIDとして用いられたものが保存される(TxExecutorのmrctid_と同じ値を持っているはず...)
+
+uint64_t DurableEpoch;                                  // Durable Epoch, 永続化された全てのデータのエポックの最大値を表す(epoch <= DのtxはCommit通知ができる)
+std::vector<uint64_t> ThLocalDurableEpoch(LOGGER_NUM);  // 各ロガースレッドのLocal durable epoch, Global durable epcohの算出に使う
+
+std::vector<WorkerResult> workerResults(THREAD_NUM);    // ワーカースレッドの実行結果を格納するベクター
+std::vector<LoggerResult> loggerResults(LOGGER_NUM);    // ロガースレッドの実行結果を格納するベクター
+
+std::atomic<Logger *> logs[LOGGER_NUM]; // ロガーオブジェクトのアトミックなポインタを保持する配列, 複数のスレッドからの安全なアクセスが可能
+Notifier notifier;                      // 通知オブジェクト, スレッド間でのイベント通知を管理する
+
+std::vector<int> readys(THREAD_NUM);    // 各ワーカースレッドの準備状態を表すベクター, 全てのスレッドが準備完了するのを待つ
 bool start = false;
 bool quit = false;
 
@@ -124,9 +128,7 @@ void ecall_worker_th(int thid, int gid) {
                 trans.write((*itr).key_);
             } else {
                 // ERR;
-                // DEBUG
-                printf("おい！なんか変だぞ！\n");
-                return;
+                assert(false);
             }
         }
    
@@ -199,11 +201,6 @@ uint64_t ecall_getSpecificAbortCount(int thid, int reason) {
 }
 
 uint64_t ecall_getLoggerCount(int thid, int type) {
-    // double cps = CLOCKS_PER_US*1e6;
-    // uint64_t byte_count = loggerResults[thid].byte_count_;
-    // double write_latency = loggerResults[thid].write_latency_/cps;
-    // double throughput = loggerResults[thid].byte_count_/(loggerResults[thid].write_latency_/cps);
-    // double wait_latency = loggerResults[thid].wait_latency_/cps;
 	switch (type) {
 		case LoggerResultType::ByteCount:
 			return loggerResults[thid].byte_count_;

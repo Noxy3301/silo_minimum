@@ -33,14 +33,11 @@ void ecall_initDB() {
     for (int i = 0; i < TUPLE_NUM; i++) {
         random_array.push_back(i);
     }
-    if (INDEX_PATTERN == 1) {
-        FisherYates(random_array);
-    }
     
     // init Table
     for (int i = 0; i < TUPLE_NUM; i++) {
-#if INDEX_PATTERN == 2
-        Tuple *tmp=new Tuple();
+#if INDEX_PATTERN == INDEX_USE_OCH
+        Tuple *tmp = new Tuple();
 #else
         Tuple *tmp;
         tmp = &Table[i];
@@ -50,7 +47,7 @@ void ecall_initDB() {
         tmp->tidword_.lock = 0;
         tmp->key_ = random_array[i];
         tmp->val_ = 0;
-#if INDEX_PATTERN == 2
+#if INDEX_PATTERN == INDEX_USE_OCH
         Table.put(i,tmp,0);
 #endif
     }

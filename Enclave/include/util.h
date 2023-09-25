@@ -7,6 +7,13 @@
 #include "random.h"
 #include "tsc.h"
 
+/**
+ * @brief 2つのタイムスタンプの差が指定された閾値より大きいかどうかを確認する
+ * @param start 開始タイムスタンプ
+ * @param stop 終了タイムスタンプ
+ * @param threshold 差を比較する閾値
+ * @return startとstopの差がthresholdより大きい場合はtrue、それ以外はfalse
+ */
 inline static bool chkClkSpan(const uint64_t start, const uint64_t stop, const uint64_t threshold) {
     uint64_t diff = 0;
     diff = stop - start;
@@ -17,6 +24,11 @@ inline static bool chkClkSpan(const uint64_t start, const uint64_t stop, const u
     }
 }
 
+/**
+ * @brief 指定された時間（ナノ秒）だけ処理を停止する
+ * @param time 停止する時間（ナノ秒）
+ * @note この関数は、処理の停止にrdtscpを用いており、指定された時間だけ処理をブロックする
+ */
 inline static void waitTime_ns(const uint64_t time) {
     uint64_t start = rdtscp();
     uint64_t end = 0;

@@ -81,7 +81,8 @@
 // Indexing configurations
 // -------------------
 // Index pattern definitions:
-// 0: ideal  - Key can be used as an array index for O(1) access. [Default]
-// 1: linear - No index; requires a linear scan to search for items.
-// 2: OCH    - Uses Optimistic Cuckoo Hashing as an index. (Work in progress)
-#define INDEX_PATTERN 2
+// 0: Masstree [default]
+//      - A high-performance, concurrent, ordered index (B+ Tree) suitable for multi-core systems.
+// 1: Optimistic Cuckoo Hashing 
+//      - A high-performance, concurrent hashing technique with efficient handling of hash collisions.
+#define INDEX_PATTERN INDEX_USE_OCH

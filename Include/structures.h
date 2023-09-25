@@ -31,3 +31,6 @@ enum LoggerResultType : uint8_t {
     WriteLatency,
     WaitLatency,
 };
+
+#define INDEX_USE_MASSTREE 0
+#define INDEX_USE_OCH 1

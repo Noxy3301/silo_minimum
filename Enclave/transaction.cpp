@@ -31,16 +31,9 @@ void TxExecutor::read(uint64_t key) {
     Tuple *tuple;
     
     // TODO: getとかに一元化したほうが良いかも
-#if INDEX_PATTERN == 0
-        tuple = &Table[key];
-#elif INDEX_PATTERN == 1
-        for (int i = 0; i < TUPLE_NUM; i++) {
-            if (Table[i].key_ == key) {
-                tuple = &Table[key];
-                break;
-            }
-        }
-#elif INDEX_PATTERN == 2
+#if INDEX_PATTERN == INDEX_USE_MASSTREE
+        // do something
+#elif INDEX_PATTERN == INDEX_USE_OCH
         tuple = Table.get(key);
 #endif
     
@@ -80,16 +73,9 @@ void TxExecutor::write(uint64_t key, uint64_t val) {
         tuple = re->rcdptr_;
     } else {
         // TODO: getとかに一元化したほうが良いかも
-#if INDEX_PATTERN == 0
+#if INDEX_PATTERN == INDEX_USE_MASSTREE
         tuple = &Table[key];
-#elif INDEX_PATTERN == 1
-        for (int i = 0; i < TUPLE_NUM; i++) {
-            if (Table[i].key_ == key) {
-                tuple = &Table[key];
-                break;
-            }
-        }
-#elif INDEX_PATTERN == 2
+#elif INDEX_PATTERN == INDEX_USE_OCH
         tuple = Table.get(key);
 #endif
     }
