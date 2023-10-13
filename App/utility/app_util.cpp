@@ -126,6 +126,7 @@ void DisplayResults::displayResult() {
     uint64_t total_write_phase_time = 0;
     uint64_t total_masstree_get_value_time = 0;
     uint64_t total_durable_epoch_work_time = 0;
+    uint64_t total_make_procedure_time = 0;
 
     for (size_t i = 0; i < workerResults.size(); i++) {
         total_read_time += workerResults[i].local_read_time_;
@@ -135,10 +136,11 @@ void DisplayResults::displayResult() {
         total_write_phase_time += workerResults[i].local_write_phase_time_;
         total_masstree_get_value_time += workerResults[i].local_masstree_get_value_time_;
         total_durable_epoch_work_time += workerResults[i].local_durable_epoch_work_time_;
+        total_make_procedure_time += workerResults[i].local_make_procedure_time_;
     }
 
     std::cout << "===== Transaction Protocol Performance ====="                             << std::endl;
-    std::cout << "[info]\tread_time(-inter-get):\t\t"             << total_read_time - total_read_internal_time - total_masstree_get_value_time << std::endl;
+    std::cout << "[info]\tread_time(-inter-get):\t\t"   << total_read_time - total_read_internal_time - total_masstree_get_value_time << "(" << total_read_time << ")" << std::endl;
     std::cout << "[info]\tread_internal_time:\t\t"      << total_read_internal_time         << std::endl;
     std::cout << "[info]\twrite_time:\t\t\t"            << total_write_time                 << std::endl;
     std::cout << "[info]\tvalidation_time:\t\t"         << total_validation_time            << std::endl;
@@ -149,11 +151,14 @@ void DisplayResults::displayResult() {
     std::cout << "[info]\toptcuckoo_get_value_time:\t"  << total_masstree_get_value_time    << std::endl;
 #endif
     std::cout << "[info]\tdurable_epoch_work_time:\t"   << total_durable_epoch_work_time    << std::endl;
+    std::cout << "[info]\tmake_procedure_time:\t\t"     << total_make_procedure_time        << std::endl;
+
     uint64_t total_time = total_read_time + 
                           total_write_time + 
                           total_validation_time + 
                           total_write_phase_time + 
-                          total_durable_epoch_work_time;
+                          total_durable_epoch_work_time + 
+                          total_make_procedure_time;
     double total_time_s = static_cast<double>(total_time) / (CLOCKS_PER_US * 1000000.0);
     std::cout << "[info]\ttotal_time(approx.):\t\t" << total_time_s / WORKER_NUM << " s" << std::endl;
 
@@ -214,6 +219,7 @@ void DisplayResults::getWorkerResult() {
         workerResults[i].local_write_phase_time_       = ecall_get_analysis(i, 4);
         workerResults[i].local_masstree_get_value_time_= ecall_get_analysis(i, 5);
         workerResults[i].local_durable_epoch_work_time_= ecall_get_analysis(i, 6);
+        workerResults[i].local_make_procedure_time_    = ecall_get_analysis(i, 7);
 #endif
     }
 }

@@ -72,13 +72,13 @@ void ecall_waitForReady() {
 
 void ecall_initDB() {
     GarbageCollector gc;    // NOTE: このgcは使われない
-    for (size_t i = 1; i < TUPLE_NUM; i++) {
+    for (uint64_t i = 0; i < TUPLE_NUM; i++) {
 #if INDEX_PATTERN == INDEX_USE_MASSTREE
-        Key key(std::to_string(i));
-        Status status = masstree.insert_value(key, new Value{std::to_string(i)}, gc);
+        Key key({i}, 8);
+        Status status = masstree.insert_value(key, new Value{i}, gc);
         if (status == Status::WARN_ALREADY_EXISTS) std::cout << "key { " << i << " } already exists" << std::endl;
 #elif INDEX_PATTERN == INDEX_USE_OCH
-        Value *value = new Value{std::to_string(i)};
+        Value *value = new Value{i};
         Table.put(i, value, 0);
 #endif
     }
@@ -91,9 +91,9 @@ void makeProcedure(std::vector<Procedure> &pro, Xoroshiro128Plus &rnd) {
         uint64_t tmpkey, tmpope;
         tmpkey = rnd.next() % TUPLE_NUM;
         if ((rnd.next() % 100) < RRAITO) {
-            pro.emplace_back(OpType::READ, std::to_string(tmpkey), "");
+            pro.emplace_back(OpType::READ, tmpkey, tmpkey);
         } else {
-            pro.emplace_back(OpType::WRITE, std::to_string(tmpkey), std::to_string(tmpkey));
+            pro.emplace_back(OpType::WRITE, tmpkey, tmpkey);
         }
     }
 }
@@ -137,8 +137,14 @@ void ecall_worker_th(int thid, int gid) {
     while (true) {
         if (__atomic_load_n(&quit, __ATOMIC_ACQUIRE)) break;
         
+#ifdef ADD_ANALYSIS
+        uint64_t start_make_procedure = rdtscp();
+#endif
         makeProcedure(trans.pro_set_, rnd); // ocallで生成したprocedureをTxExecutorに移し替える
-
+#ifdef ADD_ANALYSIS
+        uint64_t end_make_procedure = rdtscp();
+        myres.local_make_procedure_time_ += end_make_procedure - start_make_procedure;
+#endif
     RETRY:
 
 #ifdef ADD_ANALYSIS
@@ -152,12 +158,32 @@ void ecall_worker_th(int thid, int gid) {
 #endif
         if (__atomic_load_n(&quit, __ATOMIC_ACQUIRE)) break;
 
+        Status status;
+
         trans.begin();
         for (auto itr = trans.pro_set_.begin(); itr != trans.pro_set_.end(); itr++) {
             if ((*itr).ope_ == OpType::READ) {
+#if INDEX_PATTERN == INDEX_USE_OCH
                 trans.read((*itr).key_);
+#elif INDEX_PATTERN == INDEX_USE_MASSTREE
+                status = trans.read((*itr).key_);
+                if (status == Status::WARN_NOT_FOUND) {
+                    trans.abort();
+                    myres.local_abort_count_++;
+                    goto RETRY;
+                }
+#endif
             } else if ((*itr).ope_ == OpType::WRITE) {
+#if INDEX_PATTERN == INDEX_USE_OCH
                 trans.write((*itr).key_, (*itr).value_);
+#elif INDEX_PATTERN == INDEX_USE_MASSTREE
+                status = trans.write((*itr).key_, (*itr).value_);
+                if (status == Status::WARN_NOT_FOUND) {
+                    trans.abort();
+                    myres.local_abort_count_++;
+                    goto RETRY;
+                }
+#endif
             } else {
                 // ERR;
                 assert(false);
@@ -230,6 +256,8 @@ uint64_t ecall_get_analysis(int thid, int type) {
             return workerResults[thid].local_masstree_get_value_time_;
         case 6:
             return workerResults[thid].local_durable_epoch_work_time_;
+        case 7:
+            return workerResults[thid].local_make_procedure_time_;
         default:
             assert(false);  // ここに来てはいけない
             return 0;

@@ -8,10 +8,10 @@
 class Procedure {
     public:
         OpType ope_;
-        std::string key_;
-        std::string value_;
+        uint64_t key_;
+        uint64_t value_;
 
-        Procedure(OpType ope, std::string key, std::string value)
+        Procedure(OpType ope, uint64_t key, uint64_t value)
             : ope_(ope), key_(key), value_(value) {}
 
         // bool operator<(const Procedure &right) const {

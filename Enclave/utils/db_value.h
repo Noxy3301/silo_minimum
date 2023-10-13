@@ -13,9 +13,9 @@ class Value {
 public:
     alignas(CACHE_LINE_SIZE) 
     TIDword tidword_;
-    std::string body_;
+    uint64_t body_;
 
-    Value(std::string body) : body_(body){};
+    Value(uint64_t body) : body_(body){};
 
     bool operator==(const Value &right) const {
         return body_ == right.body_;

@@ -30,6 +30,12 @@ class Key {
         size_t lastSliceSize = 0;       // 最後のスライスのサイズ
         size_t cursor = 0;              // 現在のスライスの位置/インデックス
 
+        Key() {
+            slices = std::vector<uint64_t>();
+            lastSliceSize = 0;
+            cursor = 0;
+        }
+
         Key(const std::string &key) {
             std::pair<std::vector<uint64_t>, size_t> slices_lastSliceSize = string_to_uint64t(key);
             slices = std::move(slices_lastSliceSize.first);
@@ -39,6 +45,20 @@ class Key {
         Key(std::vector<uint64_t> slices_, size_t lastSliceSize_) : slices(std::move(slices_)), lastSliceSize(lastSliceSize_) {
             assert(1 <= lastSliceSize && lastSliceSize <= 8);
         }
+
+        void set(const std::string &key) {
+            std::pair<std::vector<uint64_t>, size_t> slices_lastSliceSize = string_to_uint64t(key);
+            slices = std::move(slices_lastSliceSize.first);
+            lastSliceSize = slices_lastSliceSize.second;
+            assert(1 <= lastSliceSize && lastSliceSize <= 8);
+        }
+
+        void set(std::vector<uint64_t> slices_, size_t lastSliceSize_) {
+            slices = std::move(slices_);
+            lastSliceSize = lastSliceSize_;
+            assert(1 <= lastSliceSize && lastSliceSize <= 8);
+        }
+
         // 次のスライスが存在するかどうかを確認する
         bool hasNext() const {
             if (slices.size() == cursor + 1) return false;

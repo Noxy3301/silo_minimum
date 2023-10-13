@@ -7,11 +7,11 @@
 
 class OpElement {
 public:
-    Key key_;
+    uint64_t key_;
     Value *value_;
     OpType op_;
 
-    OpElement(const Key &key, Value *value, OpType op)
+    OpElement(const uint64_t &key, Value *value, OpType op)
         : key_(key), value_(value), op_(op) {}
 };
 
@@ -19,7 +19,7 @@ class ReadElement : public OpElement {
 public:
     using OpElement::OpElement;
 
-    ReadElement(const Key &key, Value *value, 
+    ReadElement(const uint64_t &key, Value *value, 
                 const TIDword &tidword, OpType op = OpType::READ)
         : OpElement(key, value, op), tidword_(tidword) {}
 
@@ -39,11 +39,11 @@ class WriteElement : public OpElement {
 public:
     using OpElement::OpElement;
 
-    WriteElement(const Key &key, Value *value, 
-                 std::string new_value_body, OpType op)
+    WriteElement(const uint64_t &key, Value *value, 
+                 uint64_t new_value_body, OpType op)
         : OpElement(key, value, op), new_value_body_(new_value_body) {}
 
-    std::string get_new_value_body() const {
+    uint64_t get_new_value_body() const {
         return new_value_body_;
     }
 
@@ -52,5 +52,5 @@ public:
     }
 
 private:
-    std::string new_value_body_;
+    uint64_t new_value_body_;
 };

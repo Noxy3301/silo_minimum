@@ -1,5 +1,14 @@
 #include "include/silo_transaction.h"
 
+
+inline int string_to_int(std::string &str_key) {
+    int key = 0;
+    for (int i = 0; i < str_key.size(); i++) {
+        key = key * 10 + (str_key[i] - '0');
+    }
+    return key;
+}
+
 // トランザクションのライフサイクル管理
 void TxExecutor::begin() {
     status_ = TransactionStatus::InFlight;
@@ -12,14 +21,14 @@ void TxExecutor::begin() {
 
 void TxExecutor::abort() {
     // remove inserted records
-    for (auto &we : write_set_) {
-        if (we.op_ == OpType::INSERT) {
-#if INDEX_PATTERN == INDEX_USE_MASSTREE
-            masstree.remove_value(we.key_, gc_);
-            delete we.value_;  // insertでwrite_set_に作成したvalue_を渡しているのでここでdeleteできる
-#endif
-        }
-    }
+//     for (auto &we : write_set_) {
+//         if (we.op_ == OpType::INSERT) {
+// #if INDEX_PATTERN == INDEX_USE_MASSTREE
+//             masstree.remove_value(we.key_, gc_);
+//             delete we.value_;  // insertでwrite_set_に作成したvalue_を渡しているのでここでdeleteできる
+// #endif
+//         }
+//     }
 
     read_set_.clear();
     write_set_.clear();
@@ -36,25 +45,25 @@ bool TxExecutor::commit() {
 
 // トランザクションの操作
 
-Status TxExecutor::insert(std::string &str_key, std::string &str_value) {
-    Key key(str_key);
+Status TxExecutor::insert(uint64_t &uint64t_key, uint64_t &uint64t_value) {
+    key_.set({uint64t_key}, 8);
 
     // If the key already exists in write_sets_, return WARN_ALREADY_EXISTS.
-    if (searchWriteSet(key)) return Status::WARN_ALREADY_EXISTS;
+    if (searchWriteSet(uint64t_key)) return Status::WARN_ALREADY_EXISTS;
 
     // If the key already exists in masstree, return WARN_ALREADY_EXISTS.
 #if INDEX_PATTERN == INDEX_USE_MASSTREE
-    Value *found_value = masstree.get_value(key);
+    Value *found_value = masstree.get_value(key_);
 #elif INDEX_PATTERN == INDEX_USE_OCH
-    Value *found_value = Table.get(std::stoi(str_key));
+    Value *found_value = Table.get(static_cast<int>(uint64t_key));
 #endif
     if (found_value != nullptr) return Status::WARN_ALREADY_EXISTS;
 
     // absent bitが立っているvalueを作成して、Masstreeに挿入する
-    Value *value = new Value(str_value);
+    Value *value = new Value(uint64t_value);
     value->tidword_.absent = true;
 #if INDEX_PATTERN == INDEX_USE_MASSTREE
-    Status status = masstree.insert_value(key, value, gc_);
+    Status status = masstree.insert_value(key_, value, gc_);
     if (status == Status::WARN_ALREADY_EXISTS) {
         delete value;
         return status;
@@ -62,7 +71,7 @@ Status TxExecutor::insert(std::string &str_key, std::string &str_value) {
 #endif
     // write_set_は指定したvalueのbody_(std::string)をstr_valueで更新する
     // insertの場合、value->body_ == str_valueだけど、write_set_の形式に合わせることで、writePhase()での処理を共通化してる
-    write_set_.emplace_back(key, value, str_value, OpType::INSERT);
+    write_set_.emplace_back(uint64t_key, value, uint64t_value, OpType::INSERT);
 
     return Status::OK;
 }
@@ -70,7 +79,7 @@ Status TxExecutor::insert(std::string &str_key, std::string &str_value) {
 // TODO: delete implementation
 // void TxExecutor::tx_delete(Key &key) {}
 
-Status TxExecutor::read(std::string &str_key) {
+Status TxExecutor::read(uint64_t &uint64t_key) {
 #ifdef ADD_ANALYSIS
     uint64_t start_read = rdtscp();
     // to avoid bypass
@@ -79,7 +88,7 @@ Status TxExecutor::read(std::string &str_key) {
     uint64_t end_read = 0;
 #endif
     // Place variables before the first goto instruction to avoid "crosses initialization of ..." error under -fpermissive.
-    Key key(str_key);
+    key_.set({uint64t_key}, 8); // MEMO:まあ最適化っていうことでこれでいいか
     Value *found_value; // TODO: found_valueを返すべきか？
 
     TIDword expected, check;
@@ -88,12 +97,12 @@ Status TxExecutor::read(std::string &str_key) {
     WriteElement *writeElement;
 
     // read-own-writes or re-read from local read set
-    readElement = searchReadSet(key);
+    readElement = searchReadSet(uint64t_key);
     if (readElement) {
         found_value = readElement->value_;  // copy value from read set
         goto FINISH_READ;
     }
-    writeElement = searchWriteSet(key);
+    writeElement = searchWriteSet(uint64t_key);
     if (writeElement) {
         found_value = writeElement->value_; // copy value from write set
         goto FINISH_READ;
@@ -102,9 +111,9 @@ Status TxExecutor::read(std::string &str_key) {
     start_masstree_read = rdtscp();
 #endif
 #if INDEX_PATTERN == INDEX_USE_MASSTREE
-    found_value = masstree.get_value(key);
+    found_value = masstree.get_value(key_);
 #elif INDEX_PATTERN == INDEX_USE_OCH
-    found_value = Table.get(std::stoi(str_key));
+    found_value = Table.get(static_cast<int>(uint64t_key)); // MEMO:事故りそう
 #endif
 #ifdef ADD_ANALYSIS
     end_masstree_read = rdtscp();
@@ -117,7 +126,7 @@ Status TxExecutor::read(std::string &str_key) {
 #endif
         return Status::WARN_NOT_FOUND;
     }
-    status = read_internal(key, found_value);
+    status = read_internal(uint64t_key, key_, found_value);
     if (status != Status::OK) {
 #ifdef ADD_ANALYSIS
         end_read = rdtscp();
@@ -135,7 +144,7 @@ FINISH_READ:
 }
 
 // read_set_に追加する前に、直前のreadで取得したvalueが変更されていないかを確認する
-Status TxExecutor::read_internal(Key &key, Value *value) {
+Status TxExecutor::read_internal(uint64_t &uint64t_key, Key &key, Value *value) {
 #ifdef ADD_ANALYSIS
     uint64_t start_read_internal = rdtscp();
 #endif
@@ -177,7 +186,7 @@ Status TxExecutor::read_internal(Key &key, Value *value) {
         expected = check;
     }
 
-    read_set_.emplace_back(key, value, expected);
+    read_set_.emplace_back(uint64t_key, value, expected);
 
 #ifdef ADD_ANALYSIS
     uint64_t end_read_internal = rdtscp();
@@ -196,42 +205,50 @@ Status TxExecutor::read_internal(Key &key, Value *value) {
  * 
  * @note In this implementation, records are registered in TxExecutor's write_set_, and during the commit phase, the records are updated based on the information in write_set_
  */
-Status TxExecutor::write(std::string &str_key, std::string &str_value) {
+Status TxExecutor::write(uint64_t &uint64t_key, uint64_t &uint64t_value) {
 #ifdef ADD_ANALYSIS
     uint64_t start_write = rdtscp();
 #endif
     // Place variables before the first goto instruction to avoid "crosses initialization of ..." error under -fpermissive.
-    Key key(str_key);
+
+    uint64_t start_temp = 0;
+    uint64_t end_temp = 0;
+        
+    start_temp = rdtscp();
+    key_.set({uint64t_key}, 8);
     Value *found_value;
     ReadElement *readElement;
+    end_temp = rdtscp();
 
-    if (searchWriteSet(key)) goto FINISH_WRITE;
+    if (searchWriteSet(uint64t_key)) goto FINISH_WRITE;
 
-    readElement = searchReadSet(key);
+    readElement = searchReadSet(uint64t_key);
     if (readElement) {
         found_value = readElement->value_;
     } else {
 #if INDEX_PATTERN == INDEX_USE_MASSTREE
-        found_value = masstree.get_value(key);
+        found_value = masstree.get_value(key_);
 #elif INDEX_PATTERN == INDEX_USE_OCH
-        found_value = Table.get(std::stoi(str_key));
+        found_value = Table.get(static_cast<int>(uint64t_key));
 #endif
         if (found_value == nullptr) {
 #ifdef ADD_ANALYSIS
             uint64_t end_write = rdtscp();
-            workerResults[worker_thid_].local_write_time_ += end_write - start_write;
+            workerResults[worker_thid_].local_write_time_ += end_write - start_write - (end_temp - start_temp);
 #endif
             return Status::WARN_NOT_FOUND;
         }
     }
 
-    write_set_.emplace_back(key, found_value, str_value, OpType::WRITE);
+
+
+    write_set_.emplace_back(uint64t_key, found_value, uint64t_value, OpType::WRITE);
 
 FINISH_WRITE:
 
 #ifdef ADD_ANALYSIS
     uint64_t end_write = rdtscp();
-    workerResults[worker_thid_].local_write_time_ += end_write - start_write;
+    workerResults[worker_thid_].local_write_time_ += end_write - start_write - (end_temp - start_temp);
 #endif
 
     return Status::OK;
@@ -481,16 +498,16 @@ void TxExecutor::durableEpochWork(uint64_t &epoch_timer_start, uint64_t &epoch_t
     // sres_lg_->local_wait_depoch_latency_ += rdtscp() - t;
 }
 
-ReadElement* TxExecutor::searchReadSet(Key& key) {
+ReadElement* TxExecutor::searchReadSet(uint64_t &uint64t_key) {
     for (auto& re : read_set_) {
-        if (re.key_ == key) return &re;
+        if (re.key_ == uint64t_key) return &re;
     }
     return nullptr;
 }
 
-WriteElement *TxExecutor::searchWriteSet(Key &key) {
+WriteElement *TxExecutor::searchWriteSet(uint64_t &uint64t_key) {
     for (auto& we : write_set_) {
-        if (we.key_ == key) return &we;
+        if (we.key_ == uint64t_key) return &we;
     }
     return nullptr;
 }

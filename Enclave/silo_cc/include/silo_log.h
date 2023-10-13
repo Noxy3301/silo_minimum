@@ -22,12 +22,12 @@ class LogRecord {
 public:
     uint64_t tid_;
     OpType op_type_;
-    std::string key_;
-    std::string value_;
+    uint64_t key_;
+    uint64_t value_;
 
     // コンストラクタ
     LogRecord(uint64_t tid, OpType op_type, 
-              const std::string &key, const std::string &value)
+              const uint64_t &key, const uint64_t &value)
         : tid_(tid), op_type_(op_type), 
           key_(key), value_(value) {}
 };

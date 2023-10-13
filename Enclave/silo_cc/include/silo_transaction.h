@@ -51,6 +51,9 @@ public:
     // for garbage collection
     GarbageCollector gc_;
 
+    // for Key
+    Key key_;
+
     TxExecutor(size_t worker_thid) : worker_thid_(worker_thid) {
         read_set_.reserve(MAX_OPE);
         write_set_.reserve(MAX_OPE);
@@ -66,11 +69,11 @@ public:
     bool commit(); // トランザクションのコミット
     
     // トランザクションの操作
-    Status insert(std::string &str_key, std::string &str_value);
+    Status insert(uint64_t &uint64t_key, uint64_t &uint64t_value);
     // void tx_delete(Key &key); // キーの削除
-    Status read(std::string &str_key);
-    Status read_internal(Key &key, Value *value);
-    Status write(std::string &str_key, std::string &str_value);
+    Status read(uint64_t &uint64t_key);
+    Status read_internal(uint64_t &uint64t_key, Key &key, Value *value);
+    Status write(uint64_t &uint64t_key, uint64_t &uint64t_value);
     // Status scan(Key &left_key, bool l_exclusive, Key &right_key, bool r_exclusive, std::vector<Value *> &result); // キーの範囲スキャン
     
     // 並行制御とロック管理
@@ -90,6 +93,6 @@ public:
     void durableEpochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop, const bool &quit); // 永続的なエポックの作業
     
     // 内部処理とヘルパーメソッド
-    ReadElement *searchReadSet(Key &key); // 読み取りセットの検索
-    WriteElement *searchWriteSet(Key &key); // 書き込みセットの検索
+    ReadElement *searchReadSet(uint64_t &uint64t_key); // 読み取りセットの検索
+    WriteElement *searchWriteSet(uint64_t &uint64t_key); // 書き込みセットの検索
 };

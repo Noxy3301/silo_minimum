@@ -10,8 +10,8 @@
 void LogBuffer::push(std::uint64_t tid, NotificationId &nid, std::vector<WriteElement> &write_set) {
     // create log records
     for (auto &itr : write_set) {
-        std::string key = itr.key_.uint64t_to_string(itr.key_.slices, itr.key_.lastSliceSize);
-        std::string val = itr.get_new_value_body();
+        uint64_t key = itr.key_;
+        uint64_t val = itr.get_new_value_body();
         log_set_.emplace_back(tid, itr.op_, key, val);
         log_set_size_++;
     }
@@ -68,8 +68,8 @@ std::string LogBuffer::create_json_log() {
         json += "{";
         json += "\"tid\": " + std::to_string(log_set_[i].tid_) + ",";
         json += "\"op_type\": \"" + OpType_to_string(log_set_[i].op_type_) + "\",";
-        json += "\"key\": \"" + log_set_[i].key_ + "\",";
-        json += "\"val\": \"" + log_set_[i].value_ + "\"";
+        json += "\"key\": \"" + std::to_string(log_set_[i].key_) + "\",";
+        json += "\"val\": \"" + std::to_string(log_set_[i].value_) + "\"";
         json += "}";
         if (i < log_set_.size() - 1) {
             json += ",";
@@ -107,6 +107,7 @@ void LogBuffer::write(PosixWriter &logfile, size_t &byte_count) {
 
     // create json format of logs
     std::string json_log = create_json_log();
+    // std::string json_log = "dummy";
     logfile.write((void*)json_log.data(), json_log.size());
 
     // clear for next transactions
