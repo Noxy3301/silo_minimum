@@ -17,3 +17,7 @@ extern uint64_t ecall_getSpecificAbortCount(int thid, int reason);
 extern uint64_t ecall_getLoggerCount(int thid, int type);
 
 extern uint64_t ecall_showDurableEpoch();
+
+#ifdef ADD_ANALYSIS
+extern uint64_t ecall_get_analysis(int thid, int type);
+#endif

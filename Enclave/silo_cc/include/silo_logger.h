@@ -3,15 +3,14 @@
 #include <mutex>
 #include <condition_variable>
 #include <vector>
-#include <queue>
-#include <unordered_map>
-#include <unordered_set>        // indexがないset集合
+#include <unordered_set>
+#include <cstdint>
 
-#include "log_writer.h"
-#include "notifier.h"
-#include "log_queue.h"
-#include "transaction.h"
-#include "log_buffer.h"
+#include "silo_log_queue.h"
+#include "silo_log_writer.h"
+#include "silo_notifier.h"
+#include "silo_log_writer.h"
+#include "silo_transaction.h"
 
 class Logger {
     private:
@@ -48,7 +47,8 @@ class Logger {
         // Stats depoch_diff_;
         LoggerResult &logger_result_;
 
-        Logger(int i, Notifier &n, LoggerResult &myres) : thid_(i), notifier_stats_(n), logger_result_(myres) {}
+        Logger(int i, Notifier &n, LoggerResult &myres)
+            : thid_(i), notifier_stats_(n), logger_result_(myres) {}
 
         void add_tx_executor(TxExecutor &trans);
         void worker();

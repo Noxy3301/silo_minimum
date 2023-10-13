@@ -2,10 +2,31 @@
 
 #include <cstdint>
 
-#include "atomic_tool.h"
-#include "procedure.h"
-#include "random.h"
-#include "tsc.h"
+// #include "atomic_tool.h"
+// #include "procedure.h"
+// #include "random.h"
+
+#include "silo_tsc.h"
+#include "../../../Include/consts.h"
+#include "../../global_variables.h"
+
+inline uint64_t atomicLoadGE() {
+    uint64_t result = __atomic_load_n(&(GlobalEpoch), __ATOMIC_ACQUIRE);
+    return result;
+}
+
+inline void atomicStoreThLocalEpoch(unsigned int thid, uint64_t newval) {
+    __atomic_store_n(&(ThLocalEpoch[thid]), newval, __ATOMIC_RELEASE);
+}
+
+inline void atomicAddGE() {
+    uint64_t expected, desired;
+    expected = atomicLoadGE();
+    for (;;) {
+        desired = expected + 1;
+        if (__atomic_compare_exchange_n(&(GlobalEpoch), &expected, desired, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) break;
+    }
+}
 
 /**
  * @brief 2つのタイムスタンプの差が指定された閾値より大きいかどうかを確認する
@@ -39,6 +60,4 @@ inline static void waitTime_ns(const uint64_t time) {
 }
 
 extern bool chkEpochLoaded();
-extern void leaderWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop);
-extern void ecall_initDB();
-extern void makeProcedure(std::vector<Procedure> &pro, Xoroshiro128Plus &rnd);
+extern void siloLeaderWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop);

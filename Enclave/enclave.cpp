@@ -12,39 +12,43 @@ using std::endl;
 #include "enclave.h"
 #include "../Include/consts.h"
 
-#include "include/logger.h"
-#include "include/notifier.h"
+// include Silo
+#include "silo_cc/include/silo_logger.h"
+#include "silo_cc/include/silo_notifier.h"
+#include "silo_cc/include/silo_util.h"
 
-#include "include/atomic_tool.h"
-#include "include/atomic_wrapper.h"
-#include "include/silo_op_element.h"
-#include "include/transaction.h"
-#include "include/tsc.h"
-#include "include/util.h"
-#include "include/zipf.h"
+// include Masstree
+#include "masstree/include/masstree.h"
 
-#include "OCH.cpp"
+// include OptCuckoo
+#include "optcuckoo/optcuckoo.cpp"
+
+// include utilities
+#include "../Include/structures.h"
+#include "global_variables.h"
+#include "utils/atomic_wrapper.h"
+#include "utils/zipf.h"
 
 #if INDEX_PATTERN == INDEX_USE_MASSTREE
-// do define masstree table
+Masstree masstree;
 #elif INDEX_PATTERN == INDEX_USE_OCH
-OptCuckoo<Tuple*> Table(TUPLE_NUM*2);
+OptCuckoo<Value*> Table(TUPLE_NUM*2);
 #endif
 
 uint64_t GlobalEpoch = 1;                       // Global Epoch
-std::vector<uint64_t> ThLocalEpoch(THREAD_NUM); // 各ワーカースレッドのLocal epoch, Global epochを参照せず、epoch更新時に更新されるLocal epochを参照してtxを処理する
-std::vector<uint64_t> CTIDW(THREAD_NUM);        // 各ワーカースレッドのCommit Timestamp ID, TID算出時にWorkerが発行したTIDとして用いられたものが保存される(TxExecutorのmrctid_と同じ値を持っているはず...)
+std::vector<uint64_t> ThLocalEpoch(WORKER_NUM); // 各ワーカースレッドのLocal epoch, Global epochを参照せず、epoch更新時に更新されるLocal epochを参照してtxを処理する
+std::vector<uint64_t> CTIDW(WORKER_NUM);        // 各ワーカースレッドのCommit Timestamp ID, TID算出時にWorkerが発行したTIDとして用いられたものが保存される(TxExecutorのmrctid_と同じ値を持っているはず...)
 
 uint64_t DurableEpoch;                                  // Durable Epoch, 永続化された全てのデータのエポックの最大値を表す(epoch <= DのtxはCommit通知ができる)
 std::vector<uint64_t> ThLocalDurableEpoch(LOGGER_NUM);  // 各ロガースレッドのLocal durable epoch, Global durable epcohの算出に使う
 
-std::vector<WorkerResult> workerResults(THREAD_NUM);    // ワーカースレッドの実行結果を格納するベクター
+std::vector<WorkerResult> workerResults(WORKER_NUM);    // ワーカースレッドの実行結果を格納するベクター
 std::vector<LoggerResult> loggerResults(LOGGER_NUM);    // ロガースレッドの実行結果を格納するベクター
 
 std::atomic<Logger *> logs[LOGGER_NUM]; // ロガーオブジェクトのアトミックなポインタを保持する配列, 複数のスレッドからの安全なアクセスが可能
 Notifier notifier;                      // 通知オブジェクト, スレッド間でのイベント通知を管理する
 
-std::vector<int> readys(THREAD_NUM);    // 各ワーカースレッドの準備状態を表すベクター, 全てのスレッドが準備完了するのを待つ
+std::vector<int> readys(WORKER_NUM);    // 各ワーカースレッドの準備状態を表すベクター, 全てのスレッドが準備完了するのを待つ
 bool start = false;
 bool quit = false;
 
@@ -66,14 +70,36 @@ void ecall_waitForReady() {
     }
 }
 
-
-void ecall_sendStart() {
-    __atomic_store_n(&start, true, __ATOMIC_RELEASE);
+void ecall_initDB() {
+    GarbageCollector gc;    // NOTE: このgcは使われない
+    for (size_t i = 1; i < TUPLE_NUM; i++) {
+#if INDEX_PATTERN == INDEX_USE_MASSTREE
+        Key key(std::to_string(i));
+        Status status = masstree.insert_value(key, new Value{std::to_string(i)}, gc);
+        if (status == Status::WARN_ALREADY_EXISTS) std::cout << "key { " << i << " } already exists" << std::endl;
+#elif INDEX_PATTERN == INDEX_USE_OCH
+        Value *value = new Value{std::to_string(i)};
+        Table.put(i, value, 0);
+#endif
+    }
 }
 
-void ecall_sendQuit() {
-    __atomic_store_n(&quit, true, __ATOMIC_RELEASE);
+// make procedure for YCSB workload (read/write only)
+void makeProcedure(std::vector<Procedure> &pro, Xoroshiro128Plus &rnd) {
+    pro.clear();
+    for (int i = 0; i < MAX_OPE; i++) {
+        uint64_t tmpkey, tmpope;
+        tmpkey = rnd.next() % TUPLE_NUM;
+        if ((rnd.next() % 100) < RRAITO) {
+            pro.emplace_back(OpType::READ, std::to_string(tmpkey), "");
+        } else {
+            pro.emplace_back(OpType::WRITE, std::to_string(tmpkey), std::to_string(tmpkey));
+        }
+    }
 }
+
+void ecall_sendStart() { __atomic_store_n(&start, true, __ATOMIC_RELEASE); }
+void ecall_sendQuit() { __atomic_store_n(&quit, true, __ATOMIC_RELEASE); }
 
 unsigned get_rand() {
     // 乱数生成器（引数にシードを指定可能）, [0, (2^32)-1] の一様分布整数を生成
@@ -115,17 +141,23 @@ void ecall_worker_th(int thid, int gid) {
 
     RETRY:
 
-        if (thid == 0) leaderWork(epoch_timer_start, epoch_timer_stop);
+#ifdef ADD_ANALYSIS
+        uint64_t start_durable_epoch_work = rdtscp();
+#endif
+        // if (thid == 0) leaderWork(epoch_timer_start, epoch_timer_stop);
         trans.durableEpochWork(epoch_timer_start, epoch_timer_stop, quit);
-
+#ifdef ADD_ANALYSIS
+        uint64_t end_durable_epoch_work = rdtscp();
+        myres.local_durable_epoch_work_time_ += end_durable_epoch_work - start_durable_epoch_work;
+#endif
         if (__atomic_load_n(&quit, __ATOMIC_ACQUIRE)) break;
 
         trans.begin();
         for (auto itr = trans.pro_set_.begin(); itr != trans.pro_set_.end(); itr++) {
-            if ((*itr).ope_ == Ope::READ) {
+            if ((*itr).ope_ == OpType::READ) {
                 trans.read((*itr).key_);
-            } else if ((*itr).ope_ == Ope::WRITE) {
-                trans.write((*itr).key_);
+            } else if ((*itr).ope_ == OpType::WRITE) {
+                trans.write((*itr).key_, (*itr).value_);
             } else {
                 // ERR;
                 assert(false);
@@ -137,25 +169,6 @@ void ecall_worker_th(int thid, int gid) {
             storeRelease(myres.local_commit_count_, loadAcquire(myres.local_commit_count_) + 1);
         } else {
             trans.abort();
-            // TODO: ここ汚いからtransの方でいい感じに処理してenumでごねごねする
-            assert(trans.abort_res_ != 0);
-            switch (trans.abort_res_) {
-                case 1:
-                    myres.local_abort_vp1_count_++;
-                    break;
-                case 2:
-                    myres.local_abort_vp2_count_++;
-                    break;
-                case 3:
-                    myres.local_abort_vp3_count_++;
-                    break;
-                case 4:
-                    myres.local_abort_nullBuffer_count_++;
-                    break;
-                default:
-                    assert(false);
-                    break;
-            }
             myres.local_abort_count_++;
             goto RETRY;
         }
@@ -199,6 +212,30 @@ uint64_t ecall_getSpecificAbortCount(int thid, int reason) {
             return 0;
     }
 }
+
+#ifdef ADD_ANALYSIS
+uint64_t ecall_get_analysis(int thid, int type) {
+    switch (type) {
+        case 0:
+            return workerResults[thid].local_read_time_;
+        case 1:
+            return workerResults[thid].local_read_internal_time_;
+        case 2:
+            return workerResults[thid].local_write_time_;
+        case 3:
+            return workerResults[thid].local_validation_time_;
+        case 4:
+            return workerResults[thid].local_write_phase_time_;
+        case 5:
+            return workerResults[thid].local_masstree_get_value_time_;
+        case 6:
+            return workerResults[thid].local_durable_epoch_work_time_;
+        default:
+            assert(false);  // ここに来てはいけない
+            return 0;
+    }
+}
+#endif
 
 uint64_t ecall_getLoggerCount(int thid, int type) {
 	switch (type) {

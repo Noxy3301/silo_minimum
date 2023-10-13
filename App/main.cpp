@@ -37,7 +37,7 @@ int main() {
     ecall_initDB();
 
     // スレッドのアフィニティオブジェクトを初期化する
-    affin.init(THREAD_NUM, LOGGER_NUM);
+    affin.init(WORKER_NUM, LOGGER_NUM);
 
     // スレッド作成開始のタイムスタンプを追加する
     results.addTimestamp();

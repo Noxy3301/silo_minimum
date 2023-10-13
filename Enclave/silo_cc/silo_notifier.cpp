@@ -1,12 +1,12 @@
-#include <iostream>
+#include "include/silo_notifier.h"
+
+#include <iostream> // TODO: std::cerr周りで使っているけど将来的には消す
 #include <fcntl.h>      // open用
 #include <unistd.h>     // write用
 #include <sys/mman.h>   // mmap用
 
-#include "include/notifier.h"
-// #include "include/debug.h"
-#include "include/logger.h"
-#include "../App/main.h"
+#include "../global_variables.h"
+#include "include/silo_logger.h"
 
 void PepochFile::open() {
     fd_ = ::open(file_name_.c_str(), O_CREAT|O_TRUNC|O_RDWR, 0644);
@@ -47,7 +47,7 @@ void Notifier::add_logger(Logger *logger) {
 uint64_t Notifier::check_durable() {
     // calculate min(d_l)
     uint64_t min_dl = __atomic_load_n(&(ThLocalDurableEpoch[0]), __ATOMIC_ACQUIRE);
-    for (unsigned int i=1; i < LOGGER_NUM; ++i) {
+    for (unsigned int i = 1; i < LOGGER_NUM; i++) {
         uint64_t dl = __atomic_load_n(&(ThLocalDurableEpoch[i]), __ATOMIC_ACQUIRE);
         if (dl < min_dl) {
             min_dl = dl;
@@ -59,8 +59,9 @@ uint64_t Notifier::check_durable() {
         if (b) {
             // store Durable Epoch
             pepoch_file_.write(min_dl);
-            int expected = ocall_count.load();
-            while (!ocall_count.compare_exchange_weak(expected, expected + 1));
+            // TODO: ocall_countの計測を残すかどうか
+            // int expected = ocall_count.load();
+            // while (!ocall_count.compare_exchange_weak(expected, expected + 1));
         }
     }
     return min_dl;
@@ -152,20 +153,20 @@ void Notifier::logger_end(Logger *logger) {
     logger_set_.erase(logger);
 }
 
-void Notifier::display() {
-    double cps = CLOCKS_PER_US*1e6;
-    size_t n = LOGGER_NUM;
-    std::cout << "wait_time[s]:\t"  << wait_latency_/cps  << std::endl;
-    std::cout << "write_time[s]:\t" << write_latency_/cps << std::endl;
-    std::cout << "write_count:\t"   << write_count_       << std::endl;
-    std::cout << "byte_count[B]:\t" << byte_count_        << std::endl;
-    std::cout << "buffer_count:\t"  << buffer_count_      << std::endl;
+// void Notifier::display() {
+//     double cps = CLOCKS_PER_US*1e6;
+//     size_t n = LOGGER_NUM;
+//     std::cout << "wait_time[s]:\t"  << wait_latency_/cps  << std::endl;
+//     std::cout << "write_time[s]:\t" << write_latency_/cps << std::endl;
+//     std::cout << "write_count:\t"   << write_count_       << std::endl;
+//     std::cout << "byte_count[B]:\t" << byte_count_        << std::endl;
+//     std::cout << "buffer_count:\t"  << buffer_count_      << std::endl;
 
-    std::cout << "throughput(thread_sum)[B/s]:\t" << throughput_*cps                           << std::endl;
-    std::cout << "throughput(byte_sum)[B/s]:\t"   << cps*byte_count_/write_latency_*n          << std::endl;
-    std::cout << "throughput(elap)[B/s]:\t"       << cps*byte_count_/(write_end_-write_start_) << std::endl;
+//     std::cout << "throughput(thread_sum)[B/s]:\t" << throughput_*cps                           << std::endl;
+//     std::cout << "throughput(byte_sum)[B/s]:\t"   << cps*byte_count_/write_latency_*n          << std::endl;
+//     std::cout << "throughput(elap)[B/s]:\t"       << cps*byte_count_/(write_end_-write_start_) << std::endl;
 
-    std::cout << "try_count:\t"     << try_count_ << std::endl; // make_durable未実装なので使えないけどこれ何意味している？
-    uint64_t d = __atomic_load_n(&(DurableEpoch), __ATOMIC_ACQUIRE);
-    std::cout << "durable_epoch:\t" << d << std::endl;          // これもcheck_durable未実装なので使えません
-}
+//     std::cout << "try_count:\t"     << try_count_ << std::endl; // make_durable未実装なので使えないけどこれ何意味している？
+//     uint64_t d = __atomic_load_n(&(DurableEpoch), __ATOMIC_ACQUIRE);
+//     std::cout << "durable_epoch:\t" << d << std::endl;          // これもcheck_durable未実装なので使えません
+// }

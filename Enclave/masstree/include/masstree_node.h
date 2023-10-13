@@ -8,9 +8,9 @@
 #include <mutex>
 #include <optional>
 
-#include "atomic_wrapper.h"
+#include "../../utils/atomic_wrapper.h"
+#include "../../utils/db_value.h"
 #include "masstree_version.h"
-#include "masstree_value.h"
 #include "masstree_key.h"
 #include "permutation.h"
 
@@ -282,7 +282,7 @@ class InteriorNode : public Node {
         }
 
     private:
-        std::atomic<uint8_t> n_keys = 0;
+        std::atomic<uint8_t> n_keys{0};
         std::array<std::atomic<uint64_t>, ORDER - 1> key_slice = {};
         std::array<std::atomic<Node *>, ORDER> child = {}; 
 };

@@ -14,7 +14,7 @@
 
 class DisplayResults {
 public:
-    DisplayResults() : workerResults(THREAD_NUM), loggerResults(LOGGER_NUM) {}
+    DisplayResults() : workerResults(WORKER_NUM), loggerResults(LOGGER_NUM) {}
 
     void addTimestamp();
     void displayParameter();

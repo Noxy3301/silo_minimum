@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "consts_benchmark.h"
+
 class WorkerResult {
 public:
     uint64_t local_commit_count_ = 0;
@@ -10,6 +12,15 @@ public:
     uint64_t local_abort_vp2_count_ = 0;
     uint64_t local_abort_vp3_count_ = 0;
     uint64_t local_abort_nullBuffer_count_ = 0;
+#ifdef ADD_ANALYSIS
+    uint64_t local_read_time_ = 0;
+    uint64_t local_read_internal_time_ = 0;
+    uint64_t local_write_time_ = 0;
+    uint64_t local_validation_time_ = 0;
+    uint64_t local_write_phase_time_ = 0;
+    uint64_t local_masstree_get_value_time_ = 0;
+    uint64_t local_durable_epoch_work_time_ = 0;
+#endif
 };
 
 class LoggerResult {
@@ -30,6 +41,16 @@ enum LoggerResultType : uint8_t {
     ByteCount,
     WriteLatency,
     WaitLatency,
+};
+
+enum class OpType : uint8_t {
+    NONE,
+    READ,
+    WRITE,
+    INSERT,
+    DELETE,
+    SCAN,
+    RMW,
 };
 
 #define INDEX_USE_MASSTREE 0

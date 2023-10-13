@@ -17,13 +17,12 @@ void DisplayResults::addTimestamp() {
  * @param EXTIME        実行時間（秒単位）
  * @param MAX_OPE       操作の最大数
  * @param RRAITO        読み取り操作の比率（パーセンテージ）
- * @param THREAD_NUM    使用されるスレッドの総数
+ * @param WORKER_NUM    使用されるスレッドの総数
  * @param TUPLE_NUM     タプルの総数
  * @param YCSB          YCSB (Yahoo! Cloud Serving Benchmark) を使用するかどうかを示すフラグ
  * @param ZIPF_SKEW     Zipf分布の歪度（0は一様分布を示す）
  * @param LOGGER_NUM    ロガースレッドの数
  * @param BUFFER_NUM    バッファの数
- * @param BUFFER_SIZE   各バッファのサイズ（バイト単位）
  */
 void DisplayResults::displayParameter() {
     std::cout << "#clocks_per_us:\t"<< CLOCKS_PER_US<< std::endl;
@@ -31,13 +30,12 @@ void DisplayResults::displayParameter() {
     std::cout << "#extime:\t"       << EXTIME       << std::endl;
     std::cout << "#max_ope:\t"      << MAX_OPE      << std::endl;
     std::cout << "#rratio:\t"       << RRAITO       << std::endl;
-    std::cout << "#thread_num:\t"   << THREAD_NUM   << std::endl;
+    std::cout << "#thread_num:\t"   << WORKER_NUM   << std::endl;
     std::cout << "#tuple_num:\t"    << TUPLE_NUM    << std::endl;
     std::cout << "#ycsb:\t\t"       << YCSB         << std::endl;
     std::cout << "#zipf_skew:\t"    << ZIPF_SKEW    << std::endl;
     std::cout << "#logger_num:\t"   << LOGGER_NUM   << std::endl;
     std::cout << "#buffer_num:\t"   << BUFFER_NUM   << std::endl;
-    std::cout << "#buffer_size:\t"  << BUFFER_SIZE  << std::endl;
 }
 
 /**
@@ -47,7 +45,7 @@ void DisplayResults::displayParameter() {
  * SHOW_DETAILS が有効な場合、詳細な結果も表示される
  * 
  * @param SiloResult 各スレッドの実行結果を保持する配列
- * @param THREAD_NUM スレッドの総数
+ * @param WORKER_NUM スレッドの総数
  * @param total_commit_counts_ 各スレッドのコミット数の合計
  * @param total_abort_counts_ 各スレッドのアボート数の合計
  * @param total_abort_res_counts_ 各アボートの理由に応じたアボート数の合計
@@ -108,7 +106,7 @@ void DisplayResults::displayResult() {
     // 算出した総和の数を元にresultを表示する
     double abort_rate = (double)total_abort_count_ / (double)(total_commit_count_ + total_abort_count_);
     uint64_t throughput = total_commit_count_ / EXTIME;
-    long double latency = powl(10.0, 9.0) / throughput * THREAD_NUM;
+    long double latency = powl(10.0, 9.0) / throughput * WORKER_NUM;
     std::cout << "===== Transaction Protocol Performance ====="                     << std::endl;
     std::cout << "[info]\tcommit_counts_:\t"       << total_commit_count_           << std::endl;
     std::cout << "[info]\tabort_counts_:\t"        << total_abort_count_            << std::endl;
@@ -116,9 +114,50 @@ void DisplayResults::displayResult() {
     std::cout << "[info]\t├─ abort_validation2:\t" << total_abort_vp2_count_        << std::endl;
     std::cout << "[info]\t├─ abort_validation3:\t" << total_abort_vp3_count_        << std::endl;
     std::cout << "[info]\t└─ abort_NULLbuffer:\t"  << total_abort_nullBuffer_count_ << std::endl;
-    std::cout << "[info]\tabort_rate:\t"           << throughput                    << std::endl;
+    std::cout << "[info]\tabort_rate:\t"           << abort_rate                    << std::endl;
     std::cout << "[info]\tlatency[ns]:\t"          << latency                       << std::endl;
     std::cout << "[info]\tthroughput[tps]:\t"      << throughput                    << std::endl;
+
+    #ifdef ADD_ANALYSIS
+    uint64_t total_read_time = 0;
+    uint64_t total_read_internal_time = 0;
+    uint64_t total_write_time = 0;
+    uint64_t total_validation_time = 0;
+    uint64_t total_write_phase_time = 0;
+    uint64_t total_masstree_get_value_time = 0;
+    uint64_t total_durable_epoch_work_time = 0;
+
+    for (size_t i = 0; i < workerResults.size(); i++) {
+        total_read_time += workerResults[i].local_read_time_;
+        total_read_internal_time += workerResults[i].local_read_internal_time_;
+        total_write_time += workerResults[i].local_write_time_;
+        total_validation_time += workerResults[i].local_validation_time_;
+        total_write_phase_time += workerResults[i].local_write_phase_time_;
+        total_masstree_get_value_time += workerResults[i].local_masstree_get_value_time_;
+        total_durable_epoch_work_time += workerResults[i].local_durable_epoch_work_time_;
+    }
+
+    std::cout << "===== Transaction Protocol Performance ====="                             << std::endl;
+    std::cout << "[info]\tread_time(-inter-get):\t\t"             << total_read_time - total_read_internal_time - total_masstree_get_value_time << std::endl;
+    std::cout << "[info]\tread_internal_time:\t\t"      << total_read_internal_time         << std::endl;
+    std::cout << "[info]\twrite_time:\t\t\t"            << total_write_time                 << std::endl;
+    std::cout << "[info]\tvalidation_time:\t\t"         << total_validation_time            << std::endl;
+    std::cout << "[info]\twrite_phase_time:\t\t"        << total_write_phase_time           << std::endl;
+#if INDEX_PATTERN == INDEX_USE_MASSTREE
+    std::cout << "[info]\tmasstree_get_value_time:\t"   << total_masstree_get_value_time    << std::endl;
+#elif INDEX_PATTERN == INDEX_USE_OCH
+    std::cout << "[info]\toptcuckoo_get_value_time:\t"  << total_masstree_get_value_time    << std::endl;
+#endif
+    std::cout << "[info]\tdurable_epoch_work_time:\t"   << total_durable_epoch_work_time    << std::endl;
+    uint64_t total_time = total_read_time + 
+                          total_write_time + 
+                          total_validation_time + 
+                          total_write_phase_time + 
+                          total_durable_epoch_work_time;
+    double total_time_s = static_cast<double>(total_time) / (CLOCKS_PER_US * 1000000.0);
+    std::cout << "[info]\ttotal_time(approx.):\t\t" << total_time_s / WORKER_NUM << " s" << std::endl;
+
+    #endif
 
     assert(timestamps.size() == 5);
     double makedb_time    = calculateDurationTime_ms(0, 1);
@@ -160,13 +199,22 @@ double DisplayResults::calculateDurationTime_ms(size_t startTimeIndex, size_t en
 }
 
 void DisplayResults::getWorkerResult() {
-    for (size_t i = 0; i < THREAD_NUM; i++) {
+    for (size_t i = 0; i < WORKER_NUM; i++) {
         workerResults[i].local_commit_count_           = ecall_getCommitCount(i);
         workerResults[i].local_abort_count_            = ecall_getAbortCount(i);
         workerResults[i].local_abort_vp1_count_        = ecall_getSpecificAbortCount(i, ValidationPhase1);
         workerResults[i].local_abort_vp2_count_        = ecall_getSpecificAbortCount(i, ValidationPhase2);
         workerResults[i].local_abort_vp3_count_        = ecall_getSpecificAbortCount(i, ValidationPhase3);
         workerResults[i].local_abort_nullBuffer_count_ = ecall_getSpecificAbortCount(i, NullCurrentBuffer);
+#ifdef ADD_ANALYSIS
+        workerResults[i].local_read_time_              = ecall_get_analysis(i, 0);
+        workerResults[i].local_read_internal_time_     = ecall_get_analysis(i, 1);
+        workerResults[i].local_write_time_             = ecall_get_analysis(i, 2);
+        workerResults[i].local_validation_time_        = ecall_get_analysis(i, 3);
+        workerResults[i].local_write_phase_time_       = ecall_get_analysis(i, 4);
+        workerResults[i].local_masstree_get_value_time_= ecall_get_analysis(i, 5);
+        workerResults[i].local_durable_epoch_work_time_= ecall_get_analysis(i, 6);
+#endif
     }
 }
 

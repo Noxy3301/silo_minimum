@@ -2,8 +2,6 @@
 
 #include <cstdint>
 
-#include "cache_line_size.h"
-
 struct TIDword {
     union {
         uint64_t obj_;
@@ -20,11 +18,4 @@ struct TIDword {
     bool operator == (const TIDword &right) const { return obj_ == right.obj_; }
     bool operator != (const TIDword &right) const { return !operator == (right); }
     bool operator < (const TIDword &right) const { return this->obj_ < right.obj_; }
-};
-
-class Tuple {
-    public:
-        alignas(CACHE_LINE_SIZE) TIDword tidword_;
-        uint64_t key_;
-        uint32_t val_;
 };

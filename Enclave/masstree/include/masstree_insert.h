@@ -2,11 +2,7 @@
 
 #include "masstree_node.h"
 #include "masstree_gc.h"
-
-enum PutResult : uint8_t {
-    DONE,
-    RetryFromUpperLayer
-};
+#include "../../utils/status.h"
 
 BorderNode *start_new_tree(const Key &key, Value *value);
 
@@ -34,4 +30,4 @@ void insert_into_parent(InteriorNode *parent, Node *node1, uint64_t slice, size_
 
 Node *split(Node *node, const Key &key, Value *value);
 
-std::pair<PutResult, Node*> masstree_put(Node *root, Key &key, Value *value, GarbageCollector &gc);
+std::pair<Status, Node*> masstree_insert(Node *root, Key &key, Value *value, GarbageCollector &gc);

@@ -1,13 +1,14 @@
 #pragma once
 
 #include <vector>
-#include <unordered_set>
-#include <thread>
+#include <cstdint>
+#include <string>
 #include <mutex>
+#include <unordered_set>
 #include <condition_variable>
 
-#include "common.h"
-#include "tsc.h"    // start_clock_記録するように使ってる
+#include "silo_tsc.h"
+#include "../../utils/db_tid.h"
 
 class NotificationId {
     public:
