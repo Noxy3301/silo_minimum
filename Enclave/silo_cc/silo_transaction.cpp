@@ -467,19 +467,6 @@ void TxExecutor::epochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_st
 }
 
 void TxExecutor::durableEpochWork(uint64_t &epoch_timer_start, uint64_t &epoch_timer_stop, const bool &quit) {
-    uint64_t old_thread_local_epoch = loadAcquire(ThLocalEpoch[worker_thid_]);
-    epochWork(epoch_timer_start, epoch_timer_stop); // NOTE: GEの更新条件が全てのWorkerが現在のGEを読み込んでいないといけないので、ここで同期をとる
-    uint64_t new_thread_local_epoch = loadAcquire(ThLocalEpoch[worker_thid_]);
-
-    // If the thread local epoch has changed, it means that current_buffer should be published.
-    if (old_thread_local_epoch != new_thread_local_epoch) {
-        // If current_buffer has contents, publish it.
-        if (log_buffer_pool_.current_buffer_->log_set_size_ != 0) {
-            // Publish the log buffer.
-            log_buffer_pool_.publish();
-        }
-    }
-
     // Wait until the log buffer pool is ready, performing epoch work in the meantime.
     while (!log_buffer_pool_.is_ready()) {
         epochWork(epoch_timer_start, epoch_timer_stop);
