@@ -253,11 +253,13 @@ uint64_t ecall_get_analysis(int thid, int type) {
         case 4:
             return workerResults[thid].local_write_phase_time_;
         case 5:
-            return workerResults[thid].local_masstree_get_value_time_;
+            return workerResults[thid].local_masstree_read_get_value_time_;
         case 6:
             return workerResults[thid].local_durable_epoch_work_time_;
         case 7:
             return workerResults[thid].local_make_procedure_time_;
+        case 8:
+            return workerResults[thid].local_masstree_write_get_value_time_;
         default:
             assert(false);  // ここに来てはいけない
             return 0;

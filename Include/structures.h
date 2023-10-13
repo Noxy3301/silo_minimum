@@ -18,7 +18,8 @@ public:
     uint64_t local_write_time_ = 0;
     uint64_t local_validation_time_ = 0;
     uint64_t local_write_phase_time_ = 0;
-    uint64_t local_masstree_get_value_time_ = 0;
+    uint64_t local_masstree_read_get_value_time_ = 0;
+    uint64_t local_masstree_write_get_value_time_ = 0;
     uint64_t local_durable_epoch_work_time_ = 0;
     uint64_t local_make_procedure_time_ = 0;
 #endif

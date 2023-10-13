@@ -56,6 +56,6 @@
 //      - A high-performance, concurrent, ordered index (B+ Tree) suitable for multi-core systems.
 // 1: INDEX_USE_OCH
 //      - A high-performance, concurrent hashing technique with efficient handling of hash collisions.
-#define INDEX_PATTERN INDEX_USE_MASSTREE
+#define INDEX_PATTERN 0
 
 #define ADD_ANALYSIS 1

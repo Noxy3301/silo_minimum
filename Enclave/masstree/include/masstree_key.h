@@ -31,7 +31,7 @@ class Key {
         size_t cursor = 0;              // 現在のスライスの位置/インデックス
 
         Key() {
-            slices = std::vector<uint64_t>();
+            slices = std::vector<uint64_t>{0};
             lastSliceSize = 0;
             cursor = 0;
         }
@@ -54,9 +54,13 @@ class Key {
         }
 
         void set(std::vector<uint64_t> slices_, size_t lastSliceSize_) {
-            slices = std::move(slices_);
+            // slices = std::move(slices_);
+            // lastSliceSize = lastSliceSize_;
+            // assert(1 <= lastSliceSize && lastSliceSize <= 8);
+            
+            // avoid move for optimization
+            slices[0] = slices_[0];
             lastSliceSize = lastSliceSize_;
-            assert(1 <= lastSliceSize && lastSliceSize <= 8);
         }
 
         // 次のスライスが存在するかどうかを確認する

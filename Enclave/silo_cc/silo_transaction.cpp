@@ -46,7 +46,9 @@ bool TxExecutor::commit() {
 // トランザクションの操作
 
 Status TxExecutor::insert(uint64_t &uint64t_key, uint64_t &uint64t_value) {
+#if INDEX_PATTERN == INDEX_USE_MASSTREE
     key_.set({uint64t_key}, 8);
+#endif
 
     // If the key already exists in write_sets_, return WARN_ALREADY_EXISTS.
     if (searchWriteSet(uint64t_key)) return Status::WARN_ALREADY_EXISTS;
@@ -88,7 +90,9 @@ Status TxExecutor::read(uint64_t &uint64t_key) {
     uint64_t end_read = 0;
 #endif
     // Place variables before the first goto instruction to avoid "crosses initialization of ..." error under -fpermissive.
+#if INDEX_PATTERN == INDEX_USE_MASSTREE
     key_.set({uint64t_key}, 8); // MEMO:まあ最適化っていうことでこれでいいか
+#endif
     Value *found_value; // TODO: found_valueを返すべきか？
 
     TIDword expected, check;
@@ -117,7 +121,7 @@ Status TxExecutor::read(uint64_t &uint64t_key) {
 #endif
 #ifdef ADD_ANALYSIS
     end_masstree_read = rdtscp();
-    workerResults[worker_thid_].local_masstree_get_value_time_ += end_masstree_read - start_masstree_read;
+    workerResults[worker_thid_].local_masstree_read_get_value_time_ += end_masstree_read - start_masstree_read;
 #endif
     if (found_value == nullptr) {
 #ifdef ADD_ANALYSIS
@@ -211,13 +215,18 @@ Status TxExecutor::write(uint64_t &uint64t_key, uint64_t &uint64t_value) {
 #endif
     // Place variables before the first goto instruction to avoid "crosses initialization of ..." error under -fpermissive.
 
+    uint64_t start_masstree_read = 0;
+    uint64_t end_masstree_read = 0;
     uint64_t start_temp = 0;
     uint64_t end_temp = 0;
         
-    start_temp = rdtscp();
+#if INDEX_PATTERN == INDEX_USE_MASSTREE
     key_.set({uint64t_key}, 8);
+#endif
+
     Value *found_value;
     ReadElement *readElement;
+    start_temp = rdtscp();
     end_temp = rdtscp();
 
     if (searchWriteSet(uint64t_key)) goto FINISH_WRITE;
@@ -226,10 +235,17 @@ Status TxExecutor::write(uint64_t &uint64t_key, uint64_t &uint64t_value) {
     if (readElement) {
         found_value = readElement->value_;
     } else {
+#ifdef ADD_ANALYSIS
+    start_masstree_read = rdtscp();
+#endif
 #if INDEX_PATTERN == INDEX_USE_MASSTREE
         found_value = masstree.get_value(key_);
 #elif INDEX_PATTERN == INDEX_USE_OCH
         found_value = Table.get(static_cast<int>(uint64t_key));
+#endif
+#ifdef ADD_ANALYSIS
+    end_masstree_read = rdtscp();
+    workerResults[worker_thid_].local_masstree_write_get_value_time_ += end_masstree_read - start_masstree_read;
 #endif
         if (found_value == nullptr) {
 #ifdef ADD_ANALYSIS

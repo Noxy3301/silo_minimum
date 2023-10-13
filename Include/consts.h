@@ -34,7 +34,7 @@
 // Buffer configurations
 // -------------------
 // The number of buffers.
-#define BUFFER_NUM 256
+#define BUFFER_NUM 1024
 // The maximum number of log entries that can be buffered before triggering a publish.
 #define MAX_BUFFERED_LOG_ENTRIES 1000
 // The epoch difference.
