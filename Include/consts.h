@@ -20,7 +20,7 @@
 // The number of worker threads.
 #define WORKER_NUM 16
 // The number of logger threads.
-#define LOGGER_NUM 4
+#define LOGGER_NUM 16
 
 // -------------------
 // Time configurations
@@ -28,13 +28,13 @@
 // The epoch duration in milliseconds.
 #define EPOCH_TIME 40
 // Clocks per microsecond for the target hardware.
-#define CLOCKS_PER_US 2900
+#define CLOCKS_PER_US 2700
 
 // -------------------
 // Buffer configurations
 // -------------------
 // The number of buffers.
-#define BUFFER_NUM 1024
+#define BUFFER_NUM 65536
 // The maximum number of log entries that can be buffered before triggering a publish.
 #define MAX_BUFFERED_LOG_ENTRIES 1000
 // The epoch difference.

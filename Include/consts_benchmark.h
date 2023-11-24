@@ -10,7 +10,7 @@
 // Execution configurations
 // -------------------
 // The execution time in seconds.
-#define EXTIME 3
+#define EXTIME 10
 // The size of a cache line in bytes.
 #define CACHE_LINE_SIZE 64
 
