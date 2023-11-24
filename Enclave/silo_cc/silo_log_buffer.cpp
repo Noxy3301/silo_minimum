@@ -109,6 +109,7 @@ void LogBuffer::write(PosixWriter &logfile, size_t &byte_count) {
     std::string json_log = create_json_log();
     // std::string json_log = "dummy";
     logfile.write((void*)json_log.data(), json_log.size());
+    byte_count += json_log.size();
 
     // clear for next transactions
     // CHECK: これあってる？
